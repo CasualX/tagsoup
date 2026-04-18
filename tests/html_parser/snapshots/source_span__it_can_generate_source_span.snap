@@ -1,0 +1,77 @@
+Document {
+    children: [
+        Element(
+            Element {
+                id: None,
+                tag: "template",
+                tag_span: Span {
+                    start: 1,
+                    end: 9,
+                },
+                kind: Template,
+                attributes: [],
+                children: [
+                    Element(
+                        Element {
+                            id: None,
+                            tag: "h1",
+                            tag_span: Span {
+                                start: 13,
+                                end: 15,
+                            },
+                            kind: Normal,
+                            attributes: [],
+                            children: [
+                                Text(
+                                    TextNode {
+                                        text: "Header",
+                                        span: Span {
+                                            start: 16,
+                                            end: 22,
+                                        },
+                                    },
+                                ),
+                            ],
+                            span: Span {
+                                start: 12,
+                                end: 27,
+                            },
+                        },
+                    ),
+                    Element(
+                        Element {
+                            id: None,
+                            tag: "p",
+                            tag_span: Span {
+                                start: 30,
+                                end: 31,
+                            },
+                            kind: Normal,
+                            attributes: [],
+                            children: [
+                                Text(
+                                    TextNode {
+                                        text: "Paragraph",
+                                        span: Span {
+                                            start: 32,
+                                            end: 41,
+                                        },
+                                    },
+                                ),
+                            ],
+                            span: Span {
+                                start: 29,
+                                end: 45,
+                            },
+                        },
+                    ),
+                ],
+                span: Span {
+                    start: 0,
+                    end: 57,
+                },
+            },
+        ),
+    ],
+    errors: [],
+}

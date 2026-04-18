@@ -1,0 +1,49 @@
+{
+  "children": [
+    {
+      "tag": "p",
+      "kind": "normal",
+      "children": [
+        {
+          "text": "This is a"
+        },
+        {
+          "tag": "b",
+          "kind": "normal",
+          "children": [
+            {
+              "text": "para"
+            }
+          ]
+        },
+        {
+          "text": "gra"
+        },
+        {
+          "tag": "b",
+          "kind": "normal",
+          "children": [
+            {
+              "text": "ph"
+            }
+          ]
+        },
+        {
+          "text": "with some"
+        },
+        {
+          "tag": "i",
+          "kind": "normal",
+          "children": [
+            {
+              "text": "weird"
+            }
+          ]
+        },
+        {
+          "text": "formatting."
+        }
+      ]
+    }
+  ]
+}

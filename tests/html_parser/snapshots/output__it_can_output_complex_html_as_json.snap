@@ -1,0 +1,57 @@
+{
+  "children": [
+    {
+      "tag": "html",
+      "kind": "normal",
+      "attributes": [
+        {
+          "key": "lang",
+          "value": {
+            "value": "sv"
+          }
+        }
+      ],
+      "children": [
+        {
+          "tag": "head",
+          "kind": "normal",
+          "children": [
+            {
+              "tag": "title",
+              "kind": "escapableRawText",
+              "children": [
+                {
+                  "text": "Här kan man va"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "body",
+          "kind": "normal",
+          "children": [
+            {
+              "tag": "h1",
+              "kind": "normal",
+              "children": [
+                {
+                  "text": "Tjena världen!"
+                }
+              ]
+            },
+            {
+              "tag": "p",
+              "kind": "normal",
+              "children": [
+                {
+                  "text": "Tänkte bara informera om att Sverige är bättre än Finland i ishockey."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

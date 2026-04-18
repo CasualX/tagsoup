@@ -1,0 +1,13 @@
+{
+  "children": [
+    {
+      "tag": "style",
+      "kind": "rawText",
+      "children": [
+        {
+          "text": ":root {\n\t\t--background-color: black;\n\t\t--text-color: white;\n\t}\n\tbody {\n\t\tbackground: var(--background-color);\n\t\tcolor: var(--text-color);\n\t}"
+        }
+      ]
+    }
+  ]
+}

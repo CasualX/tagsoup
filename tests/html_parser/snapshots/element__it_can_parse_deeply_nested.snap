@@ -1,0 +1,122 @@
+{
+  "children": [
+    {
+      "tag": "div",
+      "kind": "normal",
+      "attributes": [
+        {
+          "key": "class",
+          "value": {
+            "value": "1"
+          }
+        }
+      ],
+      "children": [
+        {
+          "tag": "div",
+          "kind": "normal",
+          "attributes": [
+            {
+              "key": "class",
+              "value": {
+                "value": "1"
+              }
+            }
+          ],
+          "children": [
+            {
+              "tag": "div",
+              "kind": "normal",
+              "attributes": [
+                {
+                  "key": "class",
+                  "value": {
+                    "value": "1"
+                  }
+                }
+              ],
+              "children": [
+                {
+                  "tag": "div",
+                  "kind": "normal",
+                  "attributes": [
+                    {
+                      "key": "class",
+                      "value": {
+                        "value": "1"
+                      }
+                    }
+                  ],
+                  "children": [
+                    {
+                      "tag": "div",
+                      "kind": "normal",
+                      "attributes": [
+                        {
+                          "key": "class",
+                          "value": {
+                            "value": "1"
+                          }
+                        }
+                      ],
+                      "children": [
+                        {
+                          "tag": "div",
+                          "kind": "normal",
+                          "attributes": [
+                            {
+                              "key": "class",
+                              "value": {
+                                "value": "1"
+                              }
+                            }
+                          ],
+                          "children": [
+                            {
+                              "tag": "div",
+                              "kind": "normal",
+                              "attributes": [
+                                {
+                                  "key": "class",
+                                  "value": {
+                                    "value": "1"
+                                  }
+                                }
+                              ],
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "kind": "normal",
+                                  "attributes": [
+                                    {
+                                      "key": "class",
+                                      "value": {
+                                        "value": "1"
+                                      }
+                                    }
+                                  ],
+                                  "children": [
+                                    {
+                                      "comment": "this is deep"
+                                    },
+                                    {
+                                      "text": "hello world"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

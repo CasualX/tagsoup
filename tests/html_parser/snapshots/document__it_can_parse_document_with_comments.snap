@@ -1,0 +1,39 @@
+{
+  "children": [
+    {
+      "comment": "comment"
+    },
+    {
+      "comment": "comment"
+    },
+    {
+      "name": "DOCTYPE",
+      "attributes": [
+        {
+          "key": "html"
+        }
+      ]
+    },
+    {
+      "comment": "comment"
+    },
+    {
+      "comment": "comment"
+    },
+    {
+      "tag": "html",
+      "kind": "normal",
+      "children": [
+        {
+          "comment": "comment"
+        }
+      ]
+    },
+    {
+      "comment": "comment"
+    },
+    {
+      "comment": "comment"
+    }
+  ]
+}

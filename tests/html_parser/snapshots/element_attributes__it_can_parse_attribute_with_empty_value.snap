@@ -1,0 +1,13 @@
+{
+  "children": [
+    {
+      "tag": "img",
+      "kind": "void",
+      "attributes": [
+        {
+          "key": "hidden"
+        }
+      ]
+    }
+  ]
+}

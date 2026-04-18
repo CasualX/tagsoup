@@ -1,0 +1,82 @@
+{
+  "children": [
+    {
+      "comment": "Normal case"
+    },
+    {
+      "tag": "div",
+      "kind": "normal",
+      "children": [
+        {
+          "text": "Text"
+        }
+      ]
+    },
+    {
+      "comment": "Whitespaces in opening tag to the left"
+    },
+    {
+      "tag": "div",
+      "kind": "normal",
+      "children": [
+        {
+          "text": "Text"
+        }
+      ]
+    },
+    {
+      "comment": "Whitespaces in opening tag to the right"
+    },
+    {
+      "tag": "div",
+      "kind": "normal",
+      "children": [
+        {
+          "text": "Text"
+        }
+      ]
+    },
+    {
+      "comment": "Whitespaces in closing tag to the left (should not work)"
+    },
+    {
+      "tag": "div",
+      "kind": "normal",
+      "children": [
+        {
+          "text": "Text <"
+        },
+        {
+          "text": "/div>"
+        },
+        {
+          "comment": "Whitespaces in closing tag to the right"
+        },
+        {
+          "tag": "div",
+          "kind": "normal",
+          "children": [
+            {
+              "text": "Text"
+            }
+          ]
+        },
+        {
+          "comment": "Whitespaces everywhere (should not work)"
+        },
+        {
+          "tag": "div",
+          "kind": "normal",
+          "children": [
+            {
+              "text": "Text <"
+            },
+            {
+              "text": "/ div >"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

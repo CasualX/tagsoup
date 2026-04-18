@@ -1,0 +1,28 @@
+{
+  "children": [
+    {
+      "tag": "div",
+      "kind": "normal",
+      "attributes": [
+        {
+          "key": "cat",
+          "value": {
+            "value": "mjau"
+          }
+        },
+        {
+          "key": "dog",
+          "value": {
+            "value": "  woff  "
+          }
+        },
+        {
+          "key": "ape",
+          "value": {
+            "value": "oh"
+          }
+        }
+      ]
+    }
+  ]
+}

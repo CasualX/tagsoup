@@ -1,0 +1,60 @@
+{
+  "children": [
+    {
+      "tag": "svg",
+      "kind": "normal",
+      "attributes": [
+        {
+          "key": "xmlns",
+          "value": {
+            "value": "http://www.w3.org/2000/svg"
+          }
+        },
+        {
+          "key": "xmlns:xlink",
+          "value": {
+            "value": "http://www.w3.org/1999/xlink"
+          }
+        }
+      ],
+      "children": [
+        {
+          "tag": "rect",
+          "kind": "normal",
+          "attributes": [
+            {
+              "key": "x",
+              "value": {
+                "value": "10"
+              }
+            },
+            {
+              "key": "y",
+              "value": {
+                "value": "10"
+              }
+            },
+            {
+              "key": "height",
+              "value": {
+                "value": "100"
+              }
+            },
+            {
+              "key": "width",
+              "value": {
+                "value": "100"
+              }
+            },
+            {
+              "key": "style",
+              "value": {
+                "value": "stroke:#ff0000; fill: #0000ff"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

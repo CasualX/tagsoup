@@ -1,0 +1,16 @@
+{
+  "children": [
+    {
+      "tag": "div",
+      "kind": "normal",
+      "attributes": [
+        {
+          "key": "data-cat",
+          "value": {
+            "value": "morris"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+[package]
+name = "tagsoup"
+version = "0.1.0"
+edition = "2024"
+
+authors = ["Casper <CasualX@users.noreply.github.com>"]
+description = "Fun html-like tag soup parser with zero dependencies."
+documentation = "https://docs.rs/tagsoup/"
+repository = "https://github.com/CasualX/tagsoup"
+readme = "readme.md"
+keywords = ["html", "parser", "query", "selector", "tagsoup"]
+categories = ["parsing"]
+license = "MIT"
+
+[features]
+default = ["serde"]
+serde = ["dep:serde"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"], optional = true }
+
+[dev-dependencies]
+serde_json = "1.0"

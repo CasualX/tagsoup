@@ -1,0 +1,17 @@
+{
+  "children": [
+    {
+      "id": "a",
+      "tag": "img",
+      "kind": "void",
+      "attributes": [
+        {
+          "key": "id",
+          "value": {
+            "value": "a"
+          }
+        }
+      ]
+    }
+  ]
+}

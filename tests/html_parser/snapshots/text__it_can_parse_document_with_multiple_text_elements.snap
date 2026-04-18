@@ -1,0 +1,14 @@
+{
+  "children": [
+    {
+      "text": "hello world\nhere's another line for you!"
+    },
+    {
+      "tag": "div",
+      "kind": "normal"
+    },
+    {
+      "text": "The end"
+    }
+  ]
+}

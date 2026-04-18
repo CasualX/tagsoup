@@ -1,0 +1,22 @@
+{
+  "children": [
+    {
+      "tag": "vue-style",
+      "kind": "normal",
+      "attributes": [
+        {
+          "key": "@attributes",
+          "value": {
+            "value": "or"
+          }
+        },
+        {
+          "key": ":bindings",
+          "value": {
+            "value": "are_not_supported"
+          }
+        }
+      ]
+    }
+  ]
+}

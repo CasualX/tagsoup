@@ -1,0 +1,29 @@
+{
+  "children": [
+    {
+      "tag": "div",
+      "kind": "normal",
+      "children": [
+        {
+          "comment": "comment"
+        },
+        {
+          "tag": "div",
+          "kind": "normal"
+        },
+        {
+          "text": "Hello"
+        },
+        {
+          "tag": "div",
+          "kind": "normal",
+          "children": [
+            {
+              "text": "World"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

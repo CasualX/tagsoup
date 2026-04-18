@@ -1,0 +1,16 @@
+{
+  "children": [
+    {
+      "tag": "img",
+      "kind": "void",
+      "attributes": [
+        {
+          "key": "attr",
+          "value": {
+            "value": " a b\t \n\t"
+          }
+        }
+      ]
+    }
+  ]
+}

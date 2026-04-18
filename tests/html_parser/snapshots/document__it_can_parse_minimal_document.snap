@@ -1,0 +1,16 @@
+{
+  "children": [
+    {
+      "name": "DOCTYPE",
+      "attributes": [
+        {
+          "key": "html"
+        }
+      ]
+    },
+    {
+      "tag": "html",
+      "kind": "normal"
+    }
+  ]
+}
