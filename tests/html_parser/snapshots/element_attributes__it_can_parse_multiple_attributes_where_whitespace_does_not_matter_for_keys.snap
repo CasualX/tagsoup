@@ -6,21 +6,15 @@
       "attributes": [
         {
           "key": "cat",
-          "value": {
-            "value": "mjau"
-          }
+          "value": "mjau"
         },
         {
           "key": "dog",
-          "value": {
-            "value": "  woff  "
-          }
+          "value": "  woff  "
         },
         {
           "key": "ape",
-          "value": {
-            "value": "oh"
-          }
+          "value": "oh"
         }
       ]
     }

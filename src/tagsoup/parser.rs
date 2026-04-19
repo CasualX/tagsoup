@@ -1,15 +1,8 @@
 use super::*;
-use std::mem;
 
 struct OpenElement<'a> {
 	element: Element<'a>,
 	open_span: Span,
-}
-
-impl<'a> Document<'a> {
-	pub fn parse(input: &'a str) -> Document<'a> {
-		parse(input)
-	}
 }
 
 fn node_span(node: &Node<'_>) -> Span {
@@ -162,7 +155,7 @@ fn parse_nodes<'a>(tokens: &mut [FlatToken<'a>], children: &mut Vec<Node<'a>>, e
 	}
 }
 
-fn parse<'a>(input: &'a str) -> Document<'a> {
+pub fn parse<'a>(input: &'a str) -> Document<'a> {
 	let mut flat = parse_flat(input);
 	let mut children = Vec::new();
 	let mut errors = flat.errors;

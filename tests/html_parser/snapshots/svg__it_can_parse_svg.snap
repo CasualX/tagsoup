@@ -6,15 +6,11 @@
       "attributes": [
         {
           "key": "xmlns",
-          "value": {
-            "value": "http://www.w3.org/2000/svg"
-          }
+          "value": "http://www.w3.org/2000/svg"
         },
         {
           "key": "xmlns:xlink",
-          "value": {
-            "value": "http://www.w3.org/1999/xlink"
-          }
+          "value": "http://www.w3.org/1999/xlink"
         }
       ],
       "children": [
@@ -24,33 +20,23 @@
           "attributes": [
             {
               "key": "x",
-              "value": {
-                "value": "10"
-              }
+              "value": "10"
             },
             {
               "key": "y",
-              "value": {
-                "value": "10"
-              }
+              "value": "10"
             },
             {
               "key": "height",
-              "value": {
-                "value": "100"
-              }
+              "value": "100"
             },
             {
               "key": "width",
-              "value": {
-                "value": "100"
-              }
+              "value": "100"
             },
             {
               "key": "style",
-              "value": {
-                "value": "stroke:#ff0000; fill: #0000ff"
-              }
+              "value": "stroke:#ff0000; fill: #0000ff"
             }
           ]
         }

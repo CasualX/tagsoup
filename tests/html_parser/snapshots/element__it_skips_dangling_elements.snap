@@ -7,9 +7,7 @@
       "attributes": [
         {
           "key": "id",
-          "value": {
-            "value": "123"
-          }
+          "value": "123"
         }
       ]
     },
@@ -20,9 +18,7 @@
       "attributes": [
         {
           "key": "id",
-          "value": {
-            "value": "321"
-          }
+          "value": "321"
         }
       ]
     }

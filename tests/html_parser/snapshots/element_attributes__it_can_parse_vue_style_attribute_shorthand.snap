@@ -6,15 +6,11 @@
       "attributes": [
         {
           "key": "@attributes",
-          "value": {
-            "value": "or"
-          }
+          "value": "or"
         },
         {
           "key": ":bindings",
-          "value": {
-            "value": "are_not_supported"
-          }
+          "value": "are_not_supported"
         }
       ]
     }

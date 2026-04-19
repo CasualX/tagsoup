@@ -6,9 +6,7 @@
       "attributes": [
         {
           "key": "attr",
-          "value": {
-            "value": " a b\t \n\t"
-          }
+          "value": " a b\t \n\t"
         }
       ]
     }

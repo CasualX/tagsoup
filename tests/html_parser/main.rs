@@ -54,7 +54,6 @@ macro_rules! assert_debug_snapshot {
 	}
 }
 
-
 mod comments;
 mod document;
 mod document_empty;

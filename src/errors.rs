@@ -43,7 +43,10 @@ impl ParseErrorKind {
 /// Document parse error.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParseError {
+	/// Span of the error in the parsed source.
 	pub span: Span,
+
+	/// Kind of the parse error.
 	pub kind: ParseErrorKind,
 }
 

@@ -17,11 +17,11 @@ pub enum ElementKind {
 	///
 	/// Template contents are still parsed and preserved in the tree, but selector queries do not descend into them.
 	Template,
-	/// An element that contains raw text that should not be parsed as HTML, cannot contain their own end tag, and must be closed by a matching end tag.
+	/// An element that contains raw text that should not be parsed as HTML and should not decode entities.
 	///
 	/// The `<script>` and `<style>` elements.
 	RawText,
-	/// An element that contains text that should not be parsed as HTML and must be closed by a matching end tag.
+	/// An element that contains raw text that should not be parsed as HTML but should decode entities.
 	///
 	/// The `<textarea>` and `<title>` elements.
 	EscapableRawText,
@@ -43,7 +43,7 @@ const fn to_lower_tag8(tag: &str) -> u64 {
 }
 
 impl ElementKind {
-	pub fn from_tag(tag: &str) -> ElementKind {
+	pub(crate) fn from_tag(tag: &str) -> ElementKind {
 		if tag.len() > 8 {
 			return ElementKind::Normal;
 		}
@@ -81,93 +81,66 @@ impl ElementKind {
 	}
 }
 
-/// Value of an attribute.
-#[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct AttributeValue<'a> {
-	pub value: &'a str,
-
-	#[cfg_attr(feature = "serde", serde(skip))]
-	pub span: Span,
-}
-
-/// Attribute of an element.
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct Attribute<'a> {
-	/// The key of the attribute.
-	pub key: &'a str,
-
-	/// The value of the attribute, if it exists.
-	#[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-	pub value: Option<AttributeValue<'a>>,
-
-	/// Span of the attribute key in the parsed source.
-	#[cfg_attr(feature = "serde", serde(skip))]
-	pub key_span: Span,
-
-	/// Span of the attribute in the parsed source.
-	#[cfg_attr(feature = "serde", serde(skip))]
-	pub span: Span,
-}
-
 /// Element in the DOM tree.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Element<'a> {
-	/// The id of the element
+	/// The id of the element.
 	#[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
 	pub id: Option<&'a str>,
 
-	/// The tag of the element
+	/// The tag of the element.
 	pub tag: &'a str,
 
-	/// Span of the element tag in the parsed source
+	/// Span of the element tag in the parsed source.
 	#[cfg_attr(feature = "serde", serde(skip))]
 	pub tag_span: Span,
 
-	/// The element kind
+	/// The element kind.
 	pub kind: ElementKind,
 
 	/// All parsed attributes in source order.
 	#[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
 	pub attributes: Vec<Attribute<'a>>,
 
-	/// All of the element's child nodes
+	/// All of the element's child nodes.
 	#[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
 	pub children: Vec<Node<'a>>,
 
-	/// Span of the element in the parsed source
+	/// Span of the element in the parsed source.
 	#[cfg_attr(feature = "serde", serde(skip))]
 	pub span: Span,
 }
 
 impl<'a> Element<'a> {
-	/// Gets the attribute with the given key, if it exists (case-insensitive).
+	/// Gets the attribute with the given key, if it exists.
 	pub fn get_attribute(&self, key: &str) -> Option<&Attribute<'a>> {
-		self.attributes.iter().find(|attr| attr.key.eq_ignore_ascii_case(key))
+		self.attributes.iter().find(|attr| attr.key == key)
 	}
 
-	/// Gets the value of the attribute with the given key, if it exists (case-insensitive).
-	pub fn get_attribute_value(&self, key: &str) -> Option<&'a str> {
-		self.get_attribute(key)?.value.as_ref().map(|value| value.value)
+	/// Gets the value of the attribute with the given key, if it exists.
+	pub fn get_attribute_value(&self, key: &str) -> Option<Cow<'a, str>> {
+		self.get_attribute(key)?.value.as_ref().map(|value| value.value())
 	}
 
 	/// Gets the text content of the element and all of its children.
+	///
+	/// This decodes HTML entities (except `script` and `style` elements) but does not normalize whitespace.
 	///
 	/// Optionally run the output through [`normalize_whitespace`] to collapse runs of ASCII whitespace into a single space.
 	#[inline]
 	pub fn text_content(&self) -> String {
 		let mut text = String::new();
-		self.text_content_into(&mut text);
+		self.text_content_into(&mut text, matches!(self.kind, ElementKind::RawText));
 		text
 	}
 
-	fn text_content_into(&self, text: &mut String) {
+	fn text_content_into(&self, text: &mut String, is_raw_text: bool) {
 		for child in &self.children {
 			match child {
-				Node::Text(text_node) => text.push_str(text_node.text),
-				Node::Element(element) => element.text_content_into(text),
+				Node::Text(text_node) if is_raw_text => text.push_str(text_node.text),
+				Node::Text(text_node) => entity::push_decoded_entities(text, text_node.text),
+				Node::Element(element) => element.text_content_into(text, matches!(element.kind, ElementKind::RawText)),
 				Node::Comment(_) => {}
 				Node::Doctype(_) => {}
 				Node::ProcessingInstruction(_) => {}

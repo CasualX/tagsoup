@@ -2,7 +2,9 @@
 /// Span of the information in the parsed source.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub struct Span {
+	/// The byte offset of the start of the span.
 	pub start: u32,
+	/// The byte offset of the end of the span.
 	pub end: u32,
 }
 
@@ -40,6 +42,8 @@ pub(crate) fn combined_span(lhs: Span, rhs: Span) -> Span {
 }
 
 /// Span of the information in the parsed source, with line and column information.
+///
+/// Lines are 1-indexed and columns are 0-indexed.
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct ResolvedSpan<'a> {
 	pub text: &'a str,
@@ -53,18 +57,14 @@ impl<'a> ResolvedSpan<'a> {
 	/// Gets a snippet of the span's text, limited to `max_len` characters.
 	pub fn snippet(&self, max_len: usize) -> &'a str {
 		let line = self.text.lines().next().unwrap_or("");
-		if line.len() > max_len {
-			&line[..max_len]
-		}
-		else {
-			line
-		}
+		let max_len = usize::min(max_len, line.len());
+		&line[..max_len]
 	}
 }
 
 fn line_col(offset: usize, source: &str) -> (u32, u32) {
-	let mut line = 1;
-	let mut column = 1;
+	let mut line = 1; // Lines are 1-indexed.
+	let mut column = 0; // Columns are 0-indexed.
 
 	for (i, c) in source.char_indices() {
 		if i >= offset {
@@ -73,7 +73,7 @@ fn line_col(offset: usize, source: &str) -> (u32, u32) {
 
 		if c == '\n' {
 			line += 1;
-			column = 1;
+			column = 0;
 		}
 		else {
 			column += 1;

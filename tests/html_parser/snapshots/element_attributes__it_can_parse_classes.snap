@@ -6,9 +6,7 @@
       "attributes": [
         {
           "key": "class",
-          "value": {
-            "value": "a b c"
-          }
+          "value": "a b c"
         }
       ]
     }

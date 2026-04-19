@@ -1,5 +1,8 @@
 use super::*;
 
+// Incrementally parse a document into a flat list of tokens, without building a tree structure.
+// The parser will attempt to recover from errors and continue parsing, but will not attempt to infer any structure from the tokens.
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum TagMarker {
 	ElementOpen, // <tag attrs>
@@ -45,9 +48,6 @@ pub enum FlatToken<'a> {
 	CData(FlatCData<'a>),
 	Text(FlatText<'a>),
 }
-
-// Incrementally parse a document into a flat list of tokens, without building a tree structure.
-// The parser will attempt to recover from errors and continue parsing, but will not attempt to infer any structure from the tokens.
 
 pub struct FlatDocument<'a> {
 	pub tokens: Vec<FlatToken<'a>>,
@@ -467,7 +467,7 @@ pub fn parse_flat<'a>(source: &'a str) -> FlatDocument<'a> {
 					tokens.push(FlatToken::Element(element));
 
 					if let Some(tag) = raw_text_tag {
-						if let Some(Token { kind: TokenKind::Text(_text), span }) = lexer.next_raw_text_until_close_tag(tag) {
+						if let Some((_text, span)) = lexer.next_raw_text_until_close_tag(tag) {
 							push_text_token(&mut tokens, source, span);
 						}
 					}

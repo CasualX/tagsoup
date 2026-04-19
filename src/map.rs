@@ -78,9 +78,12 @@ impl<'a, 'dom> Map<'a, 'dom> {
 	pub fn add_classes(&mut self, nodes: &'dom [Node<'a>]) {
 		for node in nodes {
 			if let Node::Element(element) = node {
-				if let Some(class_attr) = element.get_attribute_value("class") {
-					for class in class_attr.split_ascii_whitespace() {
-						self.by_class.entry(class).or_default().push(element);
+				// Only consider class attributes that are valid and have a value (ignoring entities...)
+				if let Some(class_attr) = element.get_attribute("class") {
+					if let Some(class_value) = &class_attr.value {
+						for class in class_value.value_raw().split_ascii_whitespace() {
+							self.by_class.entry(class).or_default().push(element);
+						}
 					}
 				}
 				self.add_classes(&element.children);

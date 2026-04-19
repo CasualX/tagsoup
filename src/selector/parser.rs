@@ -36,17 +36,6 @@ impl std::error::Error for ParseSelectorError {
 	}
 }
 
-#[cfg(debug_assertions)]
-#[inline]
-fn unsafe_as_str(bytes: &[u8]) -> &str {
-	std::str::from_utf8(bytes).unwrap()
-}
-#[cfg(not(debug_assertions))]
-#[inline]
-fn unsafe_as_str(bytes: &[u8]) -> &str {
-	unsafe { std::str::from_utf8_unchecked(bytes) }
-}
-
 enum LexerState {
 	Selector,
 	AttrName,
@@ -83,19 +72,15 @@ impl<'a> Parser<'a> {
 				break;
 			}
 
-			if parser.peek() == Some(b'>') {
+			if let Some(combinator) = parser.next_combinator() {
 				let combinator_position = parser.position;
 				parser.bump();
 
-				if matches!(parser.steps.last(), Some(Step::Combinator(Combinator::Child))) {
+				if parser.last_is_combinator() {
 					return Err(parser.error_at(combinator_position, parser.position, ParseSelectorErrorKind::InvalidSelector));
 				}
 
-				if matches!(parser.steps.last(), Some(Step::Combinator(Combinator::Descendant))) {
-					parser.steps.pop();
-				}
-
-				parser.steps.push(Step::Combinator(Combinator::Child));
+				parser.steps.push(Step::Combinator(combinator));
 				continue;
 			}
 
@@ -289,6 +274,15 @@ impl<'a> Parser<'a> {
 
 	fn last_is_combinator(&self) -> bool {
 		matches!(self.steps.last(), Some(Step::Combinator(_)))
+	}
+
+	fn next_combinator(&self) -> Option<Combinator> {
+		match self.peek() {
+			Some(b'>') => Some(Combinator::Child),
+			Some(b'+') => Some(Combinator::NextSibling),
+			Some(b'~') => Some(Combinator::SubsequentSibling),
+			_ => None,
+		}
 	}
 
 	fn is_eof(&self) -> bool {

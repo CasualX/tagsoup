@@ -7,6 +7,8 @@ pub mod parser;
 pub enum Combinator {
 	Descendant,
 	Child,
+	NextSibling,
+	SubsequentSibling,
 }
 
 #[derive(Debug, PartialEq)]

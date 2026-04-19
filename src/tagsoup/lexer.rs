@@ -13,10 +13,10 @@ pub enum TokenKind<'a> {
 	SelfTagClose, // />
 	CDataOpen, // <![CDATA[
 	CDataClose, // ]]>
-	Ident(&'a str), // foo._baz, xml:bar, :class, @id, etc.
+	Ident(&'a str), // Tags, attribute name: foo._baz, xml:bar, :class, @id, etc.
 	Equals, // =
-	Quoted(&'a str), // "foo" or 'foo'
-	Text(&'a str), // text content between tags
+	Quoted(&'a str), // Quoted attribute value: "foo" or 'foo'
+	Text(&'a str), // Text literals
 	Error(&'a str), // Invalid token
 }
 
@@ -51,26 +51,15 @@ pub struct Token<'a> {
 	pub span: Span,
 }
 
-#[cfg(debug_assertions)]
-#[inline]
-fn unsafe_as_str(bytes: &[u8]) -> &str {
-	std::str::from_utf8(bytes).unwrap()
-}
-#[cfg(not(debug_assertions))]
-#[inline]
-fn unsafe_as_str(bytes: &[u8]) -> &str {
-	unsafe { std::str::from_utf8_unchecked(bytes) }
-}
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum LexerState {
 	TagSoup, // Normal parsing state
-	ProcessingInstruction, // Inside a processing instruction
 	Comment, // Inside a comment
+	CData, // Inside a CDATA section
 	TagAttrs, // Inside a tag
 	TagAttrValue, // Reading an attribute value inside a tag
+	PIAttrs, // Inside a processing instruction
 	PIAttrValue, // Reading an attribute value inside a processing instruction
-	CData, // Inside a CDATA section
 }
 
 #[derive(Clone)]
@@ -99,7 +88,9 @@ impl<'a> Lexer<'a> {
 	}
 
 	#[inline]
-	fn is_raw_text_close_tag_at_position(&self, tag: &[u8]) -> bool {
+	fn is_raw_text_close_tag_at_position(&self, tag: &str) -> bool {
+		let tag = tag.as_bytes();
+
 		let Some(candidate) = self.input.get(self.position..) else {
 			return false;
 		};
@@ -123,9 +114,8 @@ impl<'a> Lexer<'a> {
 		}
 	}
 
-	pub(crate) fn next_raw_text_until_close_tag(&mut self, tag: &str) -> Option<Token<'a>> {
+	pub(crate) fn next_raw_text_until_close_tag(&mut self, tag: &str) -> Option<(&'a str, Span)> {
 		let start = self.position;
-		let tag = tag.as_bytes();
 
 		while self.next_less_than() {
 			if self.is_raw_text_close_tag_at_position(tag) {
@@ -141,7 +131,7 @@ impl<'a> Lexer<'a> {
 
 		let text = unsafe_as_str(&self.input[start..self.position]);
 		let span = Span::new(start, self.position);
-		Some(Token { kind: TokenKind::Text(text), span })
+		Some((text, span))
 	}
 
 	// Slurp characters while the predicate returns true, and return the slurped string slice.
@@ -165,7 +155,7 @@ impl<'a> Lexer<'a> {
 		Some((text, span))
 	}
 
-	// Skip ASCII whitespace characters.
+	/// Skip ASCII whitespace characters.
 	#[inline]
 	fn skip_whitespace(&mut self) {
 		self.slurp(u8::is_ascii_whitespace);
@@ -273,6 +263,7 @@ impl<'a> Lexer<'a> {
 		Some((text, span))
 	}
 
+	// Generate an error token for the remaining input.
 	fn next_error(&mut self) -> Token<'a> {
 		let text = unsafe_as_str(&self.input[self.position..]);
 		let span = Span::new(self.position, self.input.len());
@@ -287,18 +278,18 @@ impl<'a> Lexer<'a> {
 
 		match self.state {
 			LexerState::TagSoup => self.next_token_tagsoup(),
-			LexerState::ProcessingInstruction => self.next_token_pi(),
 			LexerState::Comment => self.next_token_comment(),
-			LexerState::TagAttrs => self.next_token_tagattrs(),
-			LexerState::TagAttrValue => self.next_token_tag_attr_value(),
-			LexerState::PIAttrValue => self.next_token_pi_attr_value(),
 			LexerState::CData => self.next_token_cdata(),
+			LexerState::TagAttrs => self.next_token_tagattrs(),
+			LexerState::TagAttrValue => self.next_token_tagattrvalue(),
+			LexerState::PIAttrs => self.next_token_piattrs(),
+			LexerState::PIAttrValue => self.next_token_piattrvalue(),
 		}
 	}
 
 	fn next_token_tagsoup(&mut self) -> Option<Token<'a>> {
 		if let Some((_text, span)) = self.next_exact(b"<?") {
-			self.state = LexerState::ProcessingInstruction;
+			self.state = LexerState::PIAttrs;
 			return Some(Token { kind: TokenKind::PIOpen, span });
 		}
 
@@ -342,50 +333,6 @@ impl<'a> Lexer<'a> {
 		return None;
 	}
 
-	fn next_token_pi(&mut self) -> Option<Token<'a>> {
-		self.skip_whitespace();
-
-		if let Some((_text, span)) = self.next_exact(b"?>") {
-			self.state = LexerState::TagSoup;
-			return Some(Token { kind: TokenKind::PIClose, span });
-		}
-
-		if let Some((text, span)) = self.next_ident() {
-			return Some(Token { kind: TokenKind::Ident(text), span });
-		}
-
-		if let Some((_text, span)) = self.next_exact(b"=") {
-			self.state = LexerState::PIAttrValue;
-			return Some(Token { kind: TokenKind::Equals, span });
-		}
-
-		if let Some((text, span)) = self.next_quoted() {
-			return Some(Token { kind: TokenKind::Quoted(text), span });
-		}
-
-		// Fallback to slurp until ">" to avoid getting stuck on malformed processing instructions
-		let position = self.position;
-		if let Some((text, span)) = self.next_until_or_eof(b">") {
-
-			if self.position >= self.input.len() {
-				// Reached end of input without finding ">", return error token
-				return Some(Token { kind: TokenKind::Error(text), span });
-			}
-
-			// Fallback to slurp until "?>" to avoid getting stuck on malformed processing instructions
-			let mut tmp = Lexer { input: &self.input[..self.position + 1], position, state: LexerState::ProcessingInstruction };
-			if let Some((text, span)) = tmp.next_until(b"?>") {
-				self.position = tmp.position;
-				return Some(Token { kind: TokenKind::Error(text), span });
-			}
-
-			self.state = LexerState::TagAttrs; // Switch to TagAttrs state to allow parsing closing ">"
-			return Some(Token { kind: TokenKind::Error(text), span });
-		}
-
-		Some(self.next_error())
-	}
-
 	fn next_token_comment(&mut self) -> Option<Token<'a>> {
 		if let Some((_text, span)) = self.next_exact(b"-->") {
 			self.state = LexerState::TagSoup;
@@ -403,6 +350,27 @@ impl<'a> Lexer<'a> {
 		// Should never reach here, either next_exact("-->") or next_until("-->") should have matched
 		#[cfg(debug_assertions)]
 		unreachable!("Lexer in Comment state should always match either a comment close or text token");
+		#[cfg(not(debug_assertions))]
+		return None;
+	}
+
+	fn next_token_cdata(&mut self) -> Option<Token<'a>> {
+		if let Some((_text, span)) = self.next_exact(b"]]>") {
+			self.state = LexerState::TagSoup;
+			return Some(Token { kind: TokenKind::CDataClose, span });
+		}
+
+		if let Some((text, span)) = self.next_until_or_eof(b"]]>") {
+			return Some(Token { kind: TokenKind::Text(text), span });
+		}
+
+		if self.position >= self.input.len() {
+			return None;
+		}
+
+		// Should never reach here, either next_exact("]]>") or next_until("]]>") should have matched
+		#[cfg(debug_assertions)]
+		unreachable!("Lexer in CDATA state should always match either a CDATA close or text token");
 		#[cfg(not(debug_assertions))]
 		return None;
 	}
@@ -440,7 +408,7 @@ impl<'a> Lexer<'a> {
 		Some(self.next_error())
 	}
 
-	fn next_token_tag_attr_value(&mut self) -> Option<Token<'a>> {
+	fn next_token_tagattrvalue(&mut self) -> Option<Token<'a>> {
 		self.skip_whitespace();
 
 		if let Some((_text, span)) = self.next_exact(b"/>") {
@@ -467,7 +435,51 @@ impl<'a> Lexer<'a> {
 		self.next_token_tagattrs()
 	}
 
-	fn next_token_pi_attr_value(&mut self) -> Option<Token<'a>> {
+	fn next_token_piattrs(&mut self) -> Option<Token<'a>> {
+		self.skip_whitespace();
+
+		if let Some((_text, span)) = self.next_exact(b"?>") {
+			self.state = LexerState::TagSoup;
+			return Some(Token { kind: TokenKind::PIClose, span });
+		}
+
+		if let Some((text, span)) = self.next_ident() {
+			return Some(Token { kind: TokenKind::Ident(text), span });
+		}
+
+		if let Some((_text, span)) = self.next_exact(b"=") {
+			self.state = LexerState::PIAttrValue;
+			return Some(Token { kind: TokenKind::Equals, span });
+		}
+
+		if let Some((text, span)) = self.next_quoted() {
+			return Some(Token { kind: TokenKind::Quoted(text), span });
+		}
+
+		// Fallback to slurp until ">" to avoid getting stuck on malformed processing instructions
+		let position = self.position;
+		if let Some((text, span)) = self.next_until_or_eof(b">") {
+
+			if self.position >= self.input.len() {
+				// Reached end of input without finding ">", return error token
+				return Some(Token { kind: TokenKind::Error(text), span });
+			}
+
+			// Fallback to slurp until "?>" to avoid getting stuck on malformed processing instructions
+			let mut tmp = Lexer { input: &self.input[..self.position + 1], position, state: LexerState::PIAttrs };
+			if let Some((text, span)) = tmp.next_until(b"?>") {
+				self.position = tmp.position;
+				return Some(Token { kind: TokenKind::Error(text), span });
+			}
+
+			self.state = LexerState::TagAttrs; // Switch to TagAttrs state to allow parsing closing ">"
+			return Some(Token { kind: TokenKind::Error(text), span });
+		}
+
+		Some(self.next_error())
+	}
+
+	fn next_token_piattrvalue(&mut self) -> Option<Token<'a>> {
 		self.skip_whitespace();
 
 		if let Some((_text, span)) = self.next_exact(b"?>") {
@@ -481,38 +493,17 @@ impl<'a> Lexer<'a> {
 		}
 
 		if let Some((text, span)) = self.next_quoted() {
-			self.state = LexerState::ProcessingInstruction;
+			self.state = LexerState::PIAttrs;
 			return Some(Token { kind: TokenKind::Quoted(text), span });
 		}
 
 		if let Some((text, span)) = self.next_unquoted_attr_value() {
-			self.state = LexerState::ProcessingInstruction;
+			self.state = LexerState::PIAttrs;
 			return Some(Token { kind: TokenKind::Ident(text), span });
 		}
 
-		self.state = LexerState::ProcessingInstruction;
-		self.next_token_pi()
-	}
-
-	fn next_token_cdata(&mut self) -> Option<Token<'a>> {
-		if let Some((_text, span)) = self.next_exact(b"]]>") {
-			self.state = LexerState::TagSoup;
-			return Some(Token { kind: TokenKind::CDataClose, span });
-		}
-
-		if let Some((text, span)) = self.next_until_or_eof(b"]]>") {
-			return Some(Token { kind: TokenKind::Text(text), span });
-		}
-
-		if self.position >= self.input.len() {
-			return None;
-		}
-
-		// Should never reach here, either next_exact("]]>") or next_until("]]>") should have matched
-		#[cfg(debug_assertions)]
-		unreachable!("Lexer in CDATA state should always match either a CDATA close or text token");
-		#[cfg(not(debug_assertions))]
-		return None;
+		self.state = LexerState::PIAttrs;
+		self.next_token_piattrs()
 	}
 }
 

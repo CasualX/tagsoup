@@ -1,4 +1,4 @@
-use super::*;
+use super::super::*;
 
 #[test]
 fn builds_nested_tree() {
@@ -6,33 +6,23 @@ fn builds_nested_tree() {
 	assert_eq!(doc.errors, vec![]);
 	assert_eq!(doc.children.len(), 3);
 
-	let Node::Text(prefix) = &doc.children[0] else {
-		panic!("expected leading text node");
-	};
+	let prefix = &doc.children[0].text().unwrap();
 	assert_eq!(prefix.text, "hello ");
 
-	let Node::Element(div) = &doc.children[1] else {
-		panic!("expected div element");
-	};
+	let div = doc.children[1].element().unwrap();
 	assert_eq!(div.tag, "div");
 	assert_eq!(div.id, Some("root"));
 	assert_eq!(div.children.len(), 2);
 
-	let Node::Element(span) = &div.children[0] else {
-		panic!("expected nested span element");
-	};
+	let span = div.children[0].element().unwrap();
 	assert_eq!(span.tag, "span");
 	assert_eq!(span.children.len(), 1);
 	assert_eq!(span.children[0].text().map(|text| text.text), Some("world"));
 
-	let Node::Comment(comment) = &div.children[1] else {
-		panic!("expected trailing comment");
-	};
+	let comment = div.children[1].comment().unwrap();
 	assert_eq!(comment.comment, " ok ");
 
-	let Node::Text(suffix) = &doc.children[2] else {
-		panic!("expected trailing text node");
-	};
+	let suffix = doc.children[2].text().unwrap();
 	assert_eq!(suffix.text, "!");
 }
 
@@ -41,14 +31,10 @@ fn forwards_id_from_flat_element() {
 	let doc = Document::parse("<div class=outer id=main><span id=inner></span></div>");
 	assert_eq!(doc.errors, vec![]);
 
-	let Some(div) = doc.children[0].element() else {
-		panic!("expected root div element");
-	};
+	let div = doc.children[0].element().unwrap();
 	assert_eq!(div.id, Some("main"));
 
-	let Some(span) = div.children[0].element() else {
-		panic!("expected nested span element");
-	};
+	let span = div.children[0].element().unwrap();
 	assert_eq!(span.id, Some("inner"));
 }
 
@@ -57,9 +43,7 @@ fn keeps_void_elements_as_leaf_nodes() {
 	let doc = Document::parse("<div><br>tail</div>");
 	assert_eq!(doc.errors, vec![]);
 
-	let Some(div) = doc.children[0].element() else {
-		panic!("expected root div element");
-	};
+	let div = doc.children[0].element().unwrap();
 	assert_eq!(div.children.len(), 2);
 	assert_eq!(div.children[0].element().map(|element| element.tag), Some("br"));
 	assert_eq!(div.children[1].text().map(|text| text.text), Some("tail"));
@@ -71,9 +55,7 @@ fn reports_self_closing_raw_text_elements() {
 	assert_eq!(doc.errors.len(), 2);
 	assert!(doc.errors.iter().all(|error| error.kind == ParseErrorKind::SelfClosingRawTextElement));
 
-	let Some(div) = doc.children[0].element() else {
-		panic!("expected root div element");
-	};
+	let div = doc.children[0].element().unwrap();
 	assert_eq!(div.children.len(), 2);
 	assert_eq!(div.children[0].element().map(|element| element.tag), Some("script"));
 	assert_eq!(div.children[1].element().map(|element| element.tag), Some("style"));
@@ -90,23 +72,17 @@ fn repairs_stack_when_closing_tag_matches_ancestor() {
 		],
 	);
 
-	let Some(div) = doc.children[0].element() else {
-		panic!("expected root div element");
-	};
+	let div = doc.children[0].element().unwrap();
 	assert_eq!(div.tag, "div");
 	assert_eq!(div.span, Span::new(0, 20));
 	assert_eq!(div.children.len(), 1);
 
-	let Some(paragraph) = div.children[0].element() else {
-		panic!("expected nested paragraph element");
-	};
+	let paragraph = div.children[0].element().unwrap();
 	assert_eq!(paragraph.tag, "p");
 	assert_eq!(paragraph.span, Span::new(5, 14));
 	assert_eq!(paragraph.children.len(), 1);
 
-	let Some(span) = paragraph.children[0].element() else {
-		panic!("expected nested span element");
-	};
+	let span = paragraph.children[0].element().unwrap();
 	assert_eq!(span.tag, "span");
 	assert_eq!(span.span, Span::new(8, 14));
 }
@@ -121,9 +97,7 @@ fn reports_unmatched_closing_tag_when_no_ancestor_matches() {
 		2,
 	);
 
-	let Some(div) = doc.children[0].element() else {
-		panic!("expected root div element");
-	};
+	let div = doc.children[0].element().unwrap();
 	assert_eq!(div.children.len(), 1);
 	assert_eq!(div.children[0].element().map(|element| element.tag), Some("span"));
 	assert_eq!(div.span, Span::new(0, 11));
@@ -144,24 +118,18 @@ fn keeps_doctypes_and_processing_instructions_in_document_order() {
 	assert_eq!(doc.errors, vec![]);
 	assert_eq!(doc.children.len(), 3);
 
-	let Node::ProcessingInstruction(pi) = &doc.children[0] else {
-		panic!("expected leading processing instruction");
-	};
+	let pi = doc.children[0].processing_instruction().unwrap();
 	assert_eq!(pi.target, "xml");
 	assert_eq!(pi.data.len(), 1);
 	assert_eq!(pi.data[0].key, "version");
 	assert_eq!(pi.data[0].value.as_ref().map(|value| value.value), Some("1.0"));
 
-	let Node::Doctype(doctype) = &doc.children[1] else {
-		panic!("expected doctype after processing instruction");
-	};
+	let doctype = doc.children[1].doctype().unwrap();
 	assert_eq!(doctype.name, "DOCTYPE");
 	assert_eq!(doctype.attributes.len(), 1);
 	assert_eq!(doctype.attributes[0].key, "html");
 
-	let Some(div) = doc.children[2].element() else {
-		panic!("expected trailing div element");
-	};
+	let div = doc.children[2].element().unwrap();
 	assert_eq!(div.tag, "div");
 }
 
@@ -170,21 +138,15 @@ fn keeps_non_element_markup_inside_open_elements() {
 	let doc = Document::parse("<root><?pi mode=\"test\"?><!DOCTYPE html><child/></root>");
 	assert_eq!(doc.errors, vec![]);
 
-	let Some(root) = doc.children[0].element() else {
-		panic!("expected root element");
-	};
+	let root = doc.children[0].element().unwrap();
 	assert_eq!(root.children.len(), 3);
 
-	let Node::ProcessingInstruction(pi) = &root.children[0] else {
-		panic!("expected nested processing instruction");
-	};
+	let pi = root.children[0].processing_instruction().unwrap();
 	assert_eq!(pi.target, "pi");
 	assert_eq!(pi.data[0].key, "mode");
 	assert_eq!(pi.data[0].value.as_ref().map(|value| value.value), Some("test"));
 
-	let Node::Doctype(doctype) = &root.children[1] else {
-		panic!("expected nested doctype");
-	};
+	let doctype = root.children[1].doctype().unwrap();
 	assert_eq!(doctype.name, "DOCTYPE");
 	assert_eq!(doctype.attributes[0].key, "html");
 
@@ -198,9 +160,7 @@ fn keeps_script_contents_out_of_html_parsing() {
 	assert_eq!(doc.errors, vec![]);
 	assert_eq!(doc.children.len(), 2);
 
-	let Some(script) = doc.children[0].element() else {
-		panic!("expected script element");
-	};
+	let script = doc.children[0].element().unwrap();
 	assert_eq!(script.tag, "script");
 	assert_eq!(script.children.len(), 1);
 	assert_eq!(script.children[0].text().map(|text| text.text), Some("if (n <= 1) { document.write([\"<\", \"/script>\"].join(\"\")); }"));
@@ -216,9 +176,7 @@ fn preserves_whitespace_only_text_nodes() {
 	assert_eq!(doc.children[0].text().map(|text| text.text), Some(" \n\t"));
 	assert_eq!(doc.children[2].text().map(|text| text.text), Some(" \n"));
 
-	let Some(div) = doc.children[1].element() else {
-		panic!("expected root div element");
-	};
+	let div = doc.children[1].element().unwrap();
 	assert_eq!(div.tag, "div");
 	assert_eq!(div.children.len(), 3);
 	assert_eq!(div.children[0].text().map(|text| text.text), Some("\n\t"));
@@ -233,9 +191,7 @@ fn keeps_textarea_contents_out_of_html_parsing() {
 	assert_eq!(doc.errors, vec![]);
 	assert_eq!(doc.children.len(), 2);
 
-	let Some(textarea) = doc.children[0].element() else {
-		panic!("expected textarea element");
-	};
+	let textarea = doc.children[0].element().unwrap();
 	assert_eq!(textarea.tag, "textarea");
 	assert_eq!(textarea.children.len(), 1);
 	assert_eq!(textarea.children[0].text().map(|text| text.text), Some("<b>not markup</b>"));
@@ -255,10 +211,40 @@ fn currently_treats_mixed_case_raw_text_end_tags_as_unmatched() {
 		],
 	);
 
-	let Some(script) = doc.children[0].element() else {
-		panic!("expected script element");
-	};
+	let script = doc.children[0].element().unwrap();
 	assert_eq!(script.children.len(), 2);
 	assert_eq!(script.children[0].text().map(|text| text.text), Some("ok"));
 	assert_eq!(script.children[1].text().map(|text| text.text), Some("tail"));
+}
+
+#[test]
+fn element_text_decoding_varies_by_element_kind() {
+	let doc = Document::parse(r#"
+		<div>Tom &amp; Jerry &lt;3 &#33;</div>
+		<script>const msg = "&amp;";</script>
+		<style>.x::before { content: "&amp;"; }</style>
+		<textarea>&lt;b&gt;ok&amp;go&lt;/b&gt;</textarea>
+		<title>A &amp; B</title>"#,
+	).trimmed();
+	assert_eq!(doc.errors, []);
+
+	let div = doc.children[0].element().unwrap();
+	assert_eq!(div.tag, "div");
+	assert_eq!(div.text_content(), "Tom & Jerry <3 !");
+
+	let script = doc.children[1].element().unwrap();
+	assert_eq!(script.tag, "script");
+	assert_eq!(script.text_content(), "const msg = \"&amp;\";");
+
+	let style = doc.children[2].element().unwrap();
+	assert_eq!(style.tag, "style");
+	assert_eq!(style.text_content(), ".x::before { content: \"&amp;\"; }");
+
+	let textarea = doc.children[3].element().unwrap();
+	assert_eq!(textarea.tag, "textarea");
+	assert_eq!(textarea.text_content(), "<b>ok&go</b>");
+
+	let title = doc.children[4].element().unwrap();
+	assert_eq!(title.tag, "title");
+	assert_eq!(title.text_content(), "A & B");
 }

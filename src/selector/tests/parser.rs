@@ -29,6 +29,22 @@ fn parses_child_and_descendant_combinators() {
 }
 
 #[test]
+fn parses_sibling_combinators() {
+	let steps = parser::Parser::parse("h2 + p.note ~ a[href]").unwrap();
+
+	assert_eq!(steps, vec![
+		Step::Combinator(Combinator::Descendant),
+		Step::Filter(Filter::Tag("h2")),
+		Step::Combinator(Combinator::NextSibling),
+		Step::Filter(Filter::Tag("p")),
+		Step::Filter(Filter::Class("note")),
+		Step::Combinator(Combinator::SubsequentSibling),
+		Step::Filter(Filter::Tag("a")),
+		Step::Filter(Filter::AttrExists("href")),
+	]);
+}
+
+#[test]
 fn parses_whitespace_as_descendant_between_groups() {
 	let steps = parser::Parser::parse("article .lead [data-kind*='feature']").unwrap();
 
@@ -69,6 +85,13 @@ fn parses_attribute_prefix_suffix_and_whitespace_operators() {
 #[test]
 fn rejects_trailing_combinator() {
 	let error = parser::Parser::parse("div >").unwrap_err();
+
+	assert_eq!(error.kind, parser::ParseSelectorErrorKind::InvalidSelector);
+}
+
+#[test]
+fn rejects_duplicate_sibling_combinators() {
+	let error = parser::Parser::parse("div + + span").unwrap_err();
 
 	assert_eq!(error.kind, parser::ParseSelectorErrorKind::InvalidSelector);
 }

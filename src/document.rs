@@ -12,6 +12,26 @@ pub struct Document<'a> {
 	pub errors: Vec<ParseError>,
 }
 
+impl<'a> Document<'a> {
+	/// Parses the input HTML and returns the document and any parse errors.
+	///
+	/// ```
+	/// // Parse an HTML fragment.
+	/// let doc = tagsoup::Document::parse("<div><p id=here>Hello, world!</p></div>");
+	///
+	/// // Check for parsing errors.
+	/// assert!(doc.errors.is_empty());
+	///
+	/// // Query the document for an element using a CSS selector.
+	/// let element = doc.query_selector("#here").unwrap();
+	/// assert_eq!(element.text_content(), "Hello, world!");
+	/// ```
+	#[inline]
+	pub fn parse(input: &'a str) -> Document<'a> {
+		tagsoup::parse(input)
+	}
+}
+
 fn trim_span<'a>(span: &mut Span, text: &mut &'a str) {
 	// Trim leading whitespace
 	let s = text.trim_ascii_start();
@@ -46,6 +66,21 @@ fn trim_nodes<'a>(nodes: &mut Vec<Node<'a>>) {
 
 impl<'a> Document<'a> {
 	/// Recursively trims all ascii whitespace from the document's text.
+	///
+	/// By default, the parser preserves all whitespace in the input.
+	/// This method trims all leading and trailing ASCII whitespace and removes any empty text nodes.
+	///
+	/// ```
+	/// let doc = tagsoup::Document::parse("  <div>  Hello, world!  </div>  ").trimmed();
+	/// assert_eq!(doc.children.len(), 1);
+	///
+	/// let element = doc.children[0].element().unwrap();
+	/// assert_eq!(element.tag, "div");
+	/// assert_eq!(element.children.len(), 1);
+	///
+	/// let text = element.children[0].text().unwrap();
+	/// assert_eq!(text.text, "Hello, world!");
+	/// ```
 	#[inline]
 	pub fn trimmed(mut self) -> Self {
 		trim_nodes(&mut self.children);
@@ -65,6 +100,14 @@ impl<'a> Document<'a> {
 				}
 			}
 		}
+	}
+
+	/// Returns a map of all nodes in the document to their parent element.
+	#[inline]
+	pub fn parents<'dom>(&'dom self) -> HashMap<*const Node<'a>, &'dom Element<'a>> {
+		let mut map = HashMap::new();
+		parents(None, &self.children, &mut map);
+		map
 	}
 
 	/// Queries the document for the first element matching the given CSS selector.
@@ -95,5 +138,17 @@ impl<'a> Document<'a> {
 			true
 		});
 		result
+	}
+}
+
+fn parents<'a, 'dom>(parent: Option<&'dom Element<'a>>, nodes: &'dom [Node<'a>], map: &mut HashMap<*const Node<'a>, &'dom Element<'a>>) {
+	for node in nodes {
+		if let Some(parent) = parent {
+			let ptr = node as *const Node<'a>;
+			map.insert(ptr, parent);
+		}
+		if let Node::Element(element) = node {
+			parents(Some(element), &element.children, map);
+		}
 	}
 }

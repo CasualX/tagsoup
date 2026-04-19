@@ -6,9 +6,7 @@
       "attributes": [
         {
           "key": "data-cat",
-          "value": {
-            "value": "morris"
-          }
+          "value": "morris"
         }
       ]
     }
