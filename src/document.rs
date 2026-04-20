@@ -92,6 +92,30 @@ impl<'a> Document<'a> {
 	/// Visits all elements in the DOM tree depth-first.
 	///
 	/// The visitor function is called for each element in the tree.
+	///
+	/// ```
+	/// let html = r#"
+	/// 	<ul>
+	/// 		<li><a href="/one">One</a></li>
+	/// 		<li><a href="/two">Two</a></li>
+	/// 	</ul>
+	/// "#;
+	///
+	/// let doc = tagsoup::Document::parse(html);
+	/// let mut hrefs = Vec::new();
+	///
+	/// doc.visit(&mut |element| {
+	/// 	if element.tag.eq_ignore_ascii_case("a") {
+	/// 		if let Some(href) = element.get_attribute_value("href") {
+	/// 			hrefs.push(href);
+	/// 		}
+	/// 	}
+	///
+	/// 	tagsoup::VisitControl::Descend
+	/// });
+	///
+	/// assert_eq!(hrefs, vec!["/one", "/two"]);
+	/// ```
 	pub fn visit(&self, visitor: &mut dyn FnMut(&Element<'a>) -> VisitControl) {
 		for child in &self.children {
 			if let Node::Element(element) = child {

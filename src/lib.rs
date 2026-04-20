@@ -35,30 +35,18 @@ let element = doc.query_selector("#here").unwrap();
 assert_eq!(element.text_content(), "Hello, world!");
 ```
 
-# Visiting The Tree
+# Querying The Tree
 
 ```
-let html = r#"
-	<ul>
-		<li><a href="/one">One</a></li>
-		<li><a href="/two">Two</a></li>
-	</ul>
-"#;
+let doc = tagsoup::Document::parse(r#"
+	<article id="main">
+		<p class="lead">Hello</p>
+		<p data-kind="feature card">world</p>
+	</article>
+"#);
 
-let doc = tagsoup::Document::parse(html);
-let mut hrefs = Vec::new();
-
-doc.visit(&mut |element| {
-	if element.tag.eq_ignore_ascii_case("a") {
-		if let Some(href) = element.get_attribute_value("href") {
-			hrefs.push(href);
-		}
-	}
-
-	tagsoup::VisitControl::Descend
-});
-
-assert_eq!(hrefs, vec!["/one", "/two"]);
+assert_eq!(doc.query_selector("#main .lead").unwrap().text_content(), "Hello");
+assert_eq!(doc.query_selector_all("[data-kind*=feature]").len(), 1);
 ```
 
 # Notes

@@ -60,33 +60,7 @@ let element = doc.query_selector("#here").unwrap();
 assert_eq!(element.text_content(), "Hello, world!");
 ```
 
-If you want to collect data from the tree directly, use the visitor API:
-
-```rust
-let html = r#"
-	<ul>
-		<li><a href="/one">One</a></li>
-		<li><a href="/two">Two</a></li>
-	</ul>
-"#;
-
-let doc = tagsoup::Document::parse(html);
-let mut hrefs = Vec::new();
-
-doc.visit(&mut |element| {
-	if element.tag.eq_ignore_ascii_case("a") {
-		if let Some(href) = element.get_attribute_value("href") {
-			hrefs.push(href);
-		}
-	}
-	
-	tagsoup::VisitControl::Descend
-});
-
-assert_eq!(hrefs, vec!["/one", "/two"]);
-```
-
-If you prefer selectors over walking the tree yourself:
+If you want to collect data, use the query API:
 
 ```rust
 let doc = tagsoup::Document::parse(r#"
