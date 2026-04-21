@@ -17,7 +17,7 @@ fn it_can_iter_1() {
 	";
 	let dom = tagsoup::Document::parse(&html);
 	let mut num_li = 0;
-	dom.visit(&mut |element| {
+	dom.visit(|_parents, element| {
 		if element.tag == "li" {
 			num_li += 1;
 		}

@@ -2,10 +2,10 @@ use super::*;
 
 struct OpenElement<'a> {
 	element: Element<'a>,
-	open_span: Span,
+	open_span: SourceSpan,
 }
 
-fn node_span(node: &Node<'_>) -> Span {
+fn node_span(node: &Node<'_>) -> SourceSpan {
 	match node {
 		Node::Text(text) => text.span,
 		Node::Element(element) => element.span,

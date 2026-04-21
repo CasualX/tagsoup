@@ -176,7 +176,7 @@ fn write_attributes(f: &mut fmt::Formatter<'_>, attributes: &[tagsoup::Attribute
 
 fn print_errors(document: &tagsoup::Document<'_>, input: &str) -> bool {
 	for error in &document.errors {
-		let span = error.span.resolve(input);
+		let span = error.span.resolve(input).expect("error span should be resolvable in the original input");
 		let snippet = span.snippet(80);
 		let snippet = if snippet.is_empty() { "<empty>" } else { snippet };
 		eprintln!(

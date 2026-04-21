@@ -1,15 +1,24 @@
 // Smoke tests against real websites
 
 fn fetch(site: &str, url: &str) -> Option<String> {
-	// Use CLI tool to fetch the HTML content of the page
+	// Always use cached version if it exists
+	let cache_path = format!("target/smoke/{}.html", site);
+	if let Ok(html) = std::fs::read_to_string(&cache_path) {
+		return Some(html);
+	}
+
+	// Use CLI tool to fetch the content of the page
 	let output = std::process::Command::new("curl")
 		.arg("-L") // Follow redirects
 		.arg("-s") // Silent mode
 		.arg(url)
 		.output()
 		.expect("Failed to execute curl");
+
+	// Cache the output for future runs
 	_ = std::fs::create_dir_all("target/smoke");
-	_ = std::fs::write(format!("target/smoke/{}.html", site), &output.stdout);
+	_ = std::fs::write(&cache_path, &output.stdout);
+
 	String::from_utf8(output.stdout).ok()
 }
 
@@ -18,7 +27,7 @@ fn assert_parses(text: &str) {
 	let doc = tagsoup::Document::parse(text);
 	if !doc.errors.is_empty() {
 		for error in &doc.errors {
-			let span = error.span.resolve(text);
+			let span = error.span.resolve(text).unwrap();
 			eprintln!("Parse error: {}:{} {}", span.start_line, span.start_column, error.kind.as_str());
 			eprintln!("--> {}", span.snippet(80));
 		}

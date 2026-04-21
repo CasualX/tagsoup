@@ -1,0 +1,40 @@
+use super::*;
+
+mod attributes;
+mod document;
+mod element;
+mod nodes;
+mod parser;
+
+pub use attributes::*;
+pub use document::*;
+pub use element::*;
+pub use nodes::*;
+
+fn visit<'a, 'dom>(
+	children: &'dom [Node<'a>],
+	parents: &mut Vec<&'dom Element<'a>>,
+	visitor: &mut dyn FnMut(&[&'dom Element<'a>], &'dom Element<'a>) -> VisitControl,
+) -> bool {
+	for child in children {
+		if let Node::Element(element) = child {
+			match visitor(parents, element) {
+				VisitControl::Descend => {}
+				VisitControl::Continue => continue,
+				VisitControl::Stop => return false,
+			}
+
+			parents.push(element);
+			let result = visit(&element.children, parents, visitor);
+			parents.pop();
+
+			if !result {
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+#[cfg(test)]
+mod tests;

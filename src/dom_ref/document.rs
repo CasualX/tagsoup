@@ -28,11 +28,11 @@ impl<'a> Document<'a> {
 	/// ```
 	#[inline]
 	pub fn parse(input: &'a str) -> Document<'a> {
-		tagsoup::parse(input)
+		parser::parse(input)
 	}
 }
 
-fn trim_span<'a>(span: &mut Span, text: &mut &'a str) {
+fn trim_span<'a>(span: &mut SourceSpan, text: &mut &'a str) {
 	// Trim leading whitespace
 	let s = text.trim_ascii_start();
 	span.start += (text.len() - s.len()) as u32;
@@ -93,6 +93,8 @@ impl<'a> Document<'a> {
 	///
 	/// The visitor function is called for each element in the tree.
 	///
+	/// The visitor is passed a slice of parent elements (ordered from root to immediate parent) and the current element.
+	///
 	/// ```
 	/// let html = r#"
 	/// 	<ul>
@@ -104,7 +106,7 @@ impl<'a> Document<'a> {
 	/// let doc = tagsoup::Document::parse(html);
 	/// let mut hrefs = Vec::new();
 	///
-	/// doc.visit(&mut |element| {
+	/// doc.visit(|_parents, element| {
 	/// 	if element.tag.eq_ignore_ascii_case("a") {
 	/// 		if let Some(href) = element.get_attribute_value("href") {
 	/// 			hrefs.push(href);
@@ -116,21 +118,19 @@ impl<'a> Document<'a> {
 	///
 	/// assert_eq!(hrefs, vec!["/one", "/two"]);
 	/// ```
-	pub fn visit(&self, visitor: &mut dyn FnMut(&Element<'a>) -> VisitControl) {
-		for child in &self.children {
-			if let Node::Element(element) = child {
-				if element.visit(visitor) == VisitControl::Stop {
-					return;
-				}
-			}
-		}
+	pub fn visit<'dom>(&'dom self, mut visitor: impl FnMut(&[&'dom Element<'a>], &'dom Element<'a>) -> VisitControl) {
+		let mut parents = Vec::new();
+		visit(&self.children, &mut parents, &mut visitor);
 	}
 
 	/// Returns a map of all nodes in the document to their parent element.
-	#[inline]
 	pub fn parents<'dom>(&'dom self) -> HashMap<*const Node<'a>, &'dom Element<'a>> {
 		let mut map = HashMap::new();
-		parents(None, &self.children, &mut map);
+		for child in &self.children {
+			if let Node::Element(element) = child {
+				parents(element, &element.children, &mut map);
+			}
+		}
 		map
 	}
 
@@ -165,14 +165,12 @@ impl<'a> Document<'a> {
 	}
 }
 
-fn parents<'a, 'dom>(parent: Option<&'dom Element<'a>>, nodes: &'dom [Node<'a>], map: &mut HashMap<*const Node<'a>, &'dom Element<'a>>) {
+fn parents<'a, 'dom>(parent: &'dom Element<'a>, nodes: &'dom [Node<'a>], map: &mut HashMap<*const Node<'a>, &'dom Element<'a>>) {
 	for node in nodes {
-		if let Some(parent) = parent {
-			let ptr = node as *const Node<'a>;
-			map.insert(ptr, parent);
-		}
+		let ptr = node as *const Node<'a>;
+		map.insert(ptr, parent);
 		if let Node::Element(element) = node {
-			parents(Some(element), &element.children, map);
+			parents(element, &element.children, map);
 		}
 	}
 }

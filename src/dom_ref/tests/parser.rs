@@ -67,24 +67,24 @@ fn repairs_stack_when_closing_tag_matches_ancestor() {
 	assert_eq!(
 		doc.errors,
 		vec![
-			ParseError { span: Span::new(8, 14), kind: ParseErrorKind::UnclosedElement },
-			ParseError { span: Span::new(5, 8), kind: ParseErrorKind::UnclosedElement },
+			ParseError { span: SourceSpan::new(8, 14), kind: ParseErrorKind::UnclosedElement },
+			ParseError { span: SourceSpan::new(5, 8), kind: ParseErrorKind::UnclosedElement },
 		],
 	);
 
 	let div = doc.children[0].element().unwrap();
 	assert_eq!(div.tag, "div");
-	assert_eq!(div.span, Span::new(0, 20));
+	assert_eq!(div.span, SourceSpan::new(0, 20));
 	assert_eq!(div.children.len(), 1);
 
 	let paragraph = div.children[0].element().unwrap();
 	assert_eq!(paragraph.tag, "p");
-	assert_eq!(paragraph.span, Span::new(5, 14));
+	assert_eq!(paragraph.span, SourceSpan::new(5, 14));
 	assert_eq!(paragraph.children.len(), 1);
 
 	let span = paragraph.children[0].element().unwrap();
 	assert_eq!(span.tag, "span");
-	assert_eq!(span.span, Span::new(8, 14));
+	assert_eq!(span.span, SourceSpan::new(8, 14));
 }
 
 #[test]
@@ -100,8 +100,8 @@ fn reports_unmatched_closing_tag_when_no_ancestor_matches() {
 	let div = doc.children[0].element().unwrap();
 	assert_eq!(div.children.len(), 1);
 	assert_eq!(div.children[0].element().map(|element| element.tag), Some("span"));
-	assert_eq!(div.span, Span::new(0, 11));
-	assert_eq!(div.children[0].element().map(|element| element.span), Some(Span::new(5, 11)));
+	assert_eq!(div.span, SourceSpan::new(0, 11));
+	assert_eq!(div.children[0].element().map(|element| element.span), Some(SourceSpan::new(5, 11)));
 }
 
 #[test]
@@ -151,7 +151,7 @@ fn keeps_non_element_markup_inside_open_elements() {
 	assert_eq!(doctype.attributes[0].key, "html");
 
 	assert_eq!(root.children[2].element().map(|element| element.tag), Some("child"));
-	assert_eq!(root.span, Span::new(0, 54));
+	assert_eq!(root.span, SourceSpan::new(0, 54));
 }
 
 #[test]
@@ -205,9 +205,9 @@ fn currently_treats_mixed_case_raw_text_end_tags_as_unmatched() {
 	assert_eq!(
 		doc.errors,
 		vec![
-			ParseError { span: Span::new(18, 20), kind: ParseErrorKind::SelfClosingEndTag },
-			ParseError { span: Span::new(10, 20), kind: ParseErrorKind::UnexpectedToken },
-			ParseError { span: Span::new(0, 8), kind: ParseErrorKind::UnclosedElement },
+			ParseError { span: SourceSpan::new(18, 20), kind: ParseErrorKind::SelfClosingEndTag },
+			ParseError { span: SourceSpan::new(10, 20), kind: ParseErrorKind::UnexpectedToken },
+			ParseError { span: SourceSpan::new(0, 8), kind: ParseErrorKind::UnclosedElement },
 		],
 	);
 

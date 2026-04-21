@@ -9,7 +9,7 @@ pub struct TextNode<'a> {
 
 	/// Span of the text node in the parsed source.
 	#[cfg_attr(feature = "serde", serde(skip))]
-	pub span: Span,
+	pub span: SourceSpan,
 }
 
 /// Comment node in the DOM tree.
@@ -21,7 +21,7 @@ pub struct CommentNode<'a> {
 
 	/// Span of the comment node in the parsed source.
 	#[cfg_attr(feature = "serde", serde(skip))]
-	pub span: Span,
+	pub span: SourceSpan,
 }
 
 /// Doctype node in the DOM tree.
@@ -35,7 +35,7 @@ pub struct DoctypeNode<'a> {
 
 	/// Span of the doctype name in the parsed source.
 	#[cfg_attr(feature = "serde", serde(skip))]
-	pub name_span: Span,
+	pub name_span: SourceSpan,
 
 	/// Attributes of the doctype.
 	///
@@ -44,7 +44,7 @@ pub struct DoctypeNode<'a> {
 
 	/// Span of the doctype in the parsed source.
 	#[cfg_attr(feature = "serde", serde(skip))]
-	pub span: Span,
+	pub span: SourceSpan,
 }
 
 /// Processing instruction node in the DOM tree.
@@ -58,7 +58,7 @@ pub struct ProcessingInstructionNode<'a> {
 
 	/// Span of the processing instruction target in the parsed source.
 	#[cfg_attr(feature = "serde", serde(skip))]
-	pub target_span: Span,
+	pub target_span: SourceSpan,
 
 	/// The data of the processing instruction.
 	///
@@ -67,7 +67,7 @@ pub struct ProcessingInstructionNode<'a> {
 
 	/// Span of the processing instruction in the parsed source.
 	#[cfg_attr(feature = "serde", serde(skip))]
-	pub span: Span,
+	pub span: SourceSpan,
 }
 
 /// Node in the DOM tree.

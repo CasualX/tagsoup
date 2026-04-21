@@ -20,7 +20,7 @@ impl ParseSelectorErrorKind {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParseSelectorError {
-	pub span: Span,
+	pub span: SourceSpan,
 	pub kind: ParseSelectorErrorKind,
 }
 
@@ -300,7 +300,7 @@ impl<'a> Parser<'a> {
 	}
 
 	fn error_at(&self, start: usize, end: usize, kind: ParseSelectorErrorKind) -> ParseSelectorError {
-		ParseSelectorError { span: Span::new(start, end), kind }
+		ParseSelectorError { span: SourceSpan::new(start, end), kind }
 	}
 }
 

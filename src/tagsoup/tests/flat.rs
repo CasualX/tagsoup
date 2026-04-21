@@ -227,6 +227,6 @@ fn preserves_text_after_empty_angle_brackets() {
 	assert!(doc.errors.iter().any(|error| error.kind == ParseErrorKind::MissingTagName));
 	assert_eq!(
 		doc.tokens,
-		vec![FlatToken::Text(FlatText { text: "hello <> world", span: Span::new(0, 14) })],
+		vec![FlatToken::Text(FlatText { text: "hello <> world", span: SourceSpan::new(0, 14) })],
 	);
 }

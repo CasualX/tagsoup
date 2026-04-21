@@ -48,7 +48,7 @@ impl<'a> TokenKind<'a> {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Token<'a> {
 	pub kind: TokenKind<'a>,
-	pub span: Span,
+	pub span: SourceSpan,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -114,7 +114,7 @@ impl<'a> Lexer<'a> {
 		}
 	}
 
-	pub(crate) fn next_raw_text_until_close_tag(&mut self, tag: &str) -> Option<(&'a str, Span)> {
+	pub(crate) fn next_raw_text_until_close_tag(&mut self, tag: &str) -> Option<(&'a str, SourceSpan)> {
 		let start = self.position;
 
 		while self.next_less_than() {
@@ -130,14 +130,14 @@ impl<'a> Lexer<'a> {
 		}
 
 		let text = unsafe_as_str(&self.input[start..self.position]);
-		let span = Span::new(start, self.position);
+		let span = SourceSpan::new(start, self.position);
 		Some((text, span))
 	}
 
 	// Slurp characters while the predicate returns true, and return the slurped string slice.
 	// Returns None if no characters were slurped.
 	#[inline]
-	fn slurp(&mut self, f: impl Fn(&u8) -> bool) -> Option<(&'a str, Span)> {
+	fn slurp(&mut self, f: impl Fn(&u8) -> bool) -> Option<(&'a str, SourceSpan)> {
 		let start = self.position;
 		while let Some(c) = self.input.get(self.position) {
 			if f(c) {
@@ -151,7 +151,7 @@ impl<'a> Lexer<'a> {
 			return None;
 		}
 		let text = unsafe_as_str(&self.input[start..self.position]);
-		let span = Span::new(start, self.position);
+		let span = SourceSpan::new(start, self.position);
 		Some((text, span))
 	}
 
@@ -163,13 +163,13 @@ impl<'a> Lexer<'a> {
 
 	/// Slurp an identifier `[a-zA-Z0-9-.:_@$]+`.
 	#[inline]
-	fn next_ident(&mut self) -> Option<(&'a str, Span)> {
+	fn next_ident(&mut self) -> Option<(&'a str, SourceSpan)> {
 		self.slurp(|&c| c >= b'a' && c <= b'z' || c >= b'A' && c <= b'Z' || c >= b'0' && c <= b'9' || c == b'-' || c == b'.' || c == b':' || c == b'_' || c == b'@' || c == b'$')
 	}
 
 	/// Slurp an unquoted attribute value.
 	#[inline]
-	fn next_unquoted_attr_value(&mut self) -> Option<(&'a str, Span)> {
+	fn next_unquoted_attr_value(&mut self) -> Option<(&'a str, SourceSpan)> {
 		self.slurp(|&c| {
 			let banned = c.is_ascii_whitespace() || c == b'"' || c == b'\'' || c == b'<' || c == b'>' || c == b'=' || c == b'`';
 			(c >= 0x21 && c < 0x7F) && !banned
@@ -178,11 +178,11 @@ impl<'a> Lexer<'a> {
 
 	// Slurp an exact byte sequence.
 	#[inline]
-	fn next_exact(&mut self, s: &[u8]) -> Option<(&'a str, Span)> {
+	fn next_exact(&mut self, s: &[u8]) -> Option<(&'a str, SourceSpan)> {
 		let input = &self.input[self.position..];
 		if input.starts_with(s) {
 			let text = unsafe_as_str(&input[..s.len()]);
-			let span = Span::new(self.position, self.position + s.len());
+			let span = SourceSpan::new(self.position, self.position + s.len());
 			self.position += s.len();
 			Some((text, span))
 		}
@@ -192,7 +192,7 @@ impl<'a> Lexer<'a> {
 	}
 
 	#[inline]
-	fn next_quoted(&mut self) -> Option<(&'a str, Span)> {
+	fn next_quoted(&mut self) -> Option<(&'a str, SourceSpan)> {
 		let quote_char = *self.input.get(self.position)?;
 		if quote_char != b'"' && quote_char != b'\'' {
 			return None;
@@ -202,7 +202,7 @@ impl<'a> Lexer<'a> {
 		while let Some(&c) = self.input.get(self.position) {
 			if c == quote_char {
 				let text = unsafe_as_str(&self.input[start..self.position]);
-				let span = Span::new(start - 1, self.position + 1); // Include quotes in span
+				let span = SourceSpan::new(start - 1, self.position + 1); // Include quotes in span
 				self.position += 1; // Skip closing quote
 				return Some((text, span));
 			}
@@ -212,12 +212,12 @@ impl<'a> Lexer<'a> {
 		}
 		// Reached end of input without finding closing quote
 		let text = unsafe_as_str(&self.input[start..]);
-		let span = Span::new(start - 1, self.input.len());
+		let span = SourceSpan::new(start - 1, self.input.len());
 		self.position = self.input.len(); // Move to end to prevent further tokens
 		Some((text, span))
 	}
 
-	fn next_until_or_eof(&mut self, end: &[u8]) -> Option<(&'a str, Span)> {
+	fn next_until_or_eof(&mut self, end: &[u8]) -> Option<(&'a str, SourceSpan)> {
 		let start = self.position;
 		loop {
 			let current = &self.input[self.position..];
@@ -236,11 +236,11 @@ impl<'a> Lexer<'a> {
 			return None;
 		}
 		let text = unsafe_as_str(&self.input[start..self.position]);
-		let span = Span::new(start, self.position);
+		let span = SourceSpan::new(start, self.position);
 		Some((text, span))
 	}
 
-	fn next_until(&mut self, end: &[u8]) -> Option<(&'a str, Span)> {
+	fn next_until(&mut self, end: &[u8]) -> Option<(&'a str, SourceSpan)> {
 		let start = self.position;
 		loop {
 			let current = &self.input[self.position..];
@@ -259,14 +259,14 @@ impl<'a> Lexer<'a> {
 			return None;
 		}
 		let text = unsafe_as_str(&self.input[start..self.position]);
-		let span = Span::new(start, self.position);
+		let span = SourceSpan::new(start, self.position);
 		Some((text, span))
 	}
 
 	// Generate an error token for the remaining input.
 	fn next_error(&mut self) -> Token<'a> {
 		let text = unsafe_as_str(&self.input[self.position..]);
-		let span = Span::new(self.position, self.input.len());
+		let span = SourceSpan::new(self.position, self.input.len());
 		self.position = self.input.len(); // Move to end to prevent further tokens
 		Token { kind: TokenKind::Error(text), span }
 	}

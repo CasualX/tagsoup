@@ -9,7 +9,7 @@ pub struct AttributeValue<'a> {
 
 	/// Span of the attribute value in the parsed source, including quotes if they exist.
 	#[cfg_attr(feature = "serde", serde(skip))]
-	pub span: Span,
+	pub span: SourceSpan,
 }
 
 impl<'a> AttributeValue<'a> {
@@ -54,11 +54,11 @@ pub struct Attribute<'a> {
 
 	/// Span of the attribute key in the parsed source.
 	#[cfg_attr(feature = "serde", serde(skip))]
-	pub key_span: Span,
+	pub key_span: SourceSpan,
 
 	/// Span of the attribute in the parsed source.
 	#[cfg_attr(feature = "serde", serde(skip))]
-	pub span: Span,
+	pub span: SourceSpan,
 }
 
 #[cfg(feature = "serde")]

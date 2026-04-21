@@ -16,29 +16,29 @@ pub enum TagMarker {
 pub struct FlatElement<'a> {
 	pub id: Option<&'a str>,
 	pub tag: &'a str,
-	pub tag_span: Span,
+	pub tag_span: SourceSpan,
 	pub tag_marker: TagMarker,
 	pub element_kind: ElementKind,
 	pub attributes: Vec<Attribute<'a>>,
-	pub span: Span,
+	pub span: SourceSpan,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FlatComment<'a> {
 	pub comment: &'a str,
-	pub span: Span,
+	pub span: SourceSpan,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FlatCData<'a> {
 	pub data: &'a str,
-	pub span: Span,
+	pub span: SourceSpan,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FlatText<'a> {
 	pub text: &'a str,
-	pub span: Span,
+	pub span: SourceSpan,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -69,7 +69,7 @@ fn consume_until_close<'a>(lexer: &mut Lexer<'a>) {
 }
 
 
-fn push_text_token<'a>(tokens: &mut Vec<FlatToken<'a>>, source: &'a str, span: Span) {
+fn push_text_token<'a>(tokens: &mut Vec<FlatToken<'a>>, source: &'a str, span: SourceSpan) {
 	let text = &source[span.start as usize..span.end as usize];
 
 	if let Some(FlatToken::Text(previous)) = tokens.last_mut()
@@ -83,7 +83,7 @@ fn push_text_token<'a>(tokens: &mut Vec<FlatToken<'a>>, source: &'a str, span: S
 	tokens.push(FlatToken::Text(FlatText { text, span }));
 }
 
-fn push_source_span_text<'a>(tokens: &mut Vec<FlatToken<'a>>, source: &'a str, span: Span) {
+fn push_source_span_text<'a>(tokens: &mut Vec<FlatToken<'a>>, source: &'a str, span: SourceSpan) {
 	push_text_token(tokens, source, span);
 }
 
@@ -97,9 +97,9 @@ fn parse_attributes_until_close<'a>(
 	lexer: &mut Lexer<'a>,
 	errors: &mut Vec<ParseError>,
 	allow_self_tag_close: bool,
-	eof_span: Span,
+	eof_span: SourceSpan,
 	missing_close_error_kind: ParseErrorKind,
-) -> (Vec<Attribute<'a>>, Option<&'a str>, Option<(TagCloseMarker, Span)>) {
+) -> (Vec<Attribute<'a>>, Option<&'a str>, Option<(TagCloseMarker, SourceSpan)>) {
 	let mut attributes = Vec::new();
 	let mut id = None;
 	let mut pending: Option<Token<'a>> = None;

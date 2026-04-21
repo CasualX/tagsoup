@@ -5,7 +5,7 @@ fn main() {
 	let dom = tagsoup::Document::parse(html);
 	let mut hrefs = Vec::new();
 
-	dom.visit(&mut |element| {
+	dom.visit(|_parents, element| {
 		if element.tag.eq_ignore_ascii_case("a") {
 			if let Some(href) = element.get_attribute_value("href") {
 				hrefs.push(href);

@@ -63,25 +63,31 @@ use std::collections::HashMap;
 use std::borrow::Cow;
 use std::{fmt, mem};
 
-mod attributes;
-mod document;
+#[macro_use]
+mod known;
+
+mod attribute;
+mod tag;
+
+pub use attribute::*;
+pub use tag::*;
+
+mod dom_ref;
 mod element;
 mod entity;
 mod errors;
 mod map;
-mod nodes;
 mod tagsoup;
 mod selector;
 mod span;
 mod utils;
 mod visit;
 
-pub use attributes::*;
-pub use document::*;
+pub use dom_ref::*;
 pub use element::*;
 pub use errors::*;
 pub use map::*;
-pub use nodes::*;
+use tagsoup::*;
 pub use span::*;
 pub use utils::*;
 pub use visit::*;

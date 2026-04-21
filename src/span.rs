@@ -1,18 +1,21 @@
 
 /// Span of the information in the parsed source.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
-pub struct Span {
+pub struct SourceSpan {
 	/// The byte offset of the start of the span.
 	pub start: u32,
 	/// The byte offset of the end of the span.
 	pub end: u32,
 }
 
-impl Span {
+impl SourceSpan {
+	/// Unknown span, used when the span cannot be determined or is not applicable.
+	pub const UNKNOWN: SourceSpan = SourceSpan { start: !0, end: !0 };
+
 	/// Constructor.
 	#[inline]
-	pub const fn new(start: usize, end: usize) -> Span {
-		Span {
+	pub const fn new(start: usize, end: usize) -> SourceSpan {
+		SourceSpan {
 			start: start as u32,
 			end: end as u32,
 		}
@@ -21,24 +24,34 @@ impl Span {
 	/// Returns the line and column of the span in the source.
 	///
 	/// This runs in _O(n)_ time, where n is the length of the source.
-	pub fn resolve<'a>(&self, source: &'a str) -> ResolvedSpan<'a> {
+	pub fn resolve<'a>(&self, source: &'a str) -> Option<ResolvedSpan<'a>> {
+		if *self == SourceSpan::UNKNOWN {
+			return None;
+		}
+
 		let text = &source[self.start as usize..self.end as usize];
 		let (start_line, start_column) = line_col(self.start as usize, source);
 		let (end_line, end_column) = line_col(self.end as usize, source);
-		ResolvedSpan {
+		Some(ResolvedSpan {
 			text,
 			start_line,
 			start_column,
 			end_line,
 			end_column,
-		}
+		})
 	}
 }
 
-pub(crate) fn combined_span(lhs: Span, rhs: Span) -> Span {
+pub(crate) fn combined_span(lhs: SourceSpan, rhs: SourceSpan) -> SourceSpan {
+	if lhs == SourceSpan::UNKNOWN {
+		return rhs;
+	}
+	if rhs == SourceSpan::UNKNOWN {
+		return lhs;
+	}
 	let start = lhs.start.min(rhs.start);
 	let end = lhs.end.max(rhs.end);
-	Span { start, end }
+	SourceSpan { start, end }
 }
 
 /// Span of the information in the parsed source, with line and column information.

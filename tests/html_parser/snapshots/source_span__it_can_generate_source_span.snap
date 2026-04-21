@@ -4,7 +4,7 @@ Document {
             Element {
                 id: None,
                 tag: "template",
-                tag_span: Span {
+                tag_span: SourceSpan {
                     start: 1,
                     end: 9,
                 },
@@ -15,7 +15,7 @@ Document {
                         Element {
                             id: None,
                             tag: "h1",
-                            tag_span: Span {
+                            tag_span: SourceSpan {
                                 start: 13,
                                 end: 15,
                             },
@@ -25,14 +25,14 @@ Document {
                                 Text(
                                     TextNode {
                                         text: "Header",
-                                        span: Span {
+                                        span: SourceSpan {
                                             start: 16,
                                             end: 22,
                                         },
                                     },
                                 ),
                             ],
-                            span: Span {
+                            span: SourceSpan {
                                 start: 12,
                                 end: 27,
                             },
@@ -42,7 +42,7 @@ Document {
                         Element {
                             id: None,
                             tag: "p",
-                            tag_span: Span {
+                            tag_span: SourceSpan {
                                 start: 30,
                                 end: 31,
                             },
@@ -52,21 +52,21 @@ Document {
                                 Text(
                                     TextNode {
                                         text: "Paragraph",
-                                        span: Span {
+                                        span: SourceSpan {
                                             start: 32,
                                             end: 41,
                                         },
                                     },
                                 ),
                             ],
-                            span: Span {
+                            span: SourceSpan {
                                 start: 29,
                                 end: 45,
                             },
                         },
                     ),
                 ],
-                span: Span {
+                span: SourceSpan {
                     start: 0,
                     end: 57,
                 },
