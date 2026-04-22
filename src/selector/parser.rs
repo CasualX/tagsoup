@@ -58,14 +58,6 @@ impl<'a> Parser<'a> {
 			return Err(parser.error_at(parser.position, parser.position, ParseSelectorErrorKind::InvalidSelector));
 		}
 
-		if parser.peek() == Some(b'>') {
-			parser.bump();
-			parser.steps.push(Step::Combinator(Combinator::Child));
-		}
-		else {
-			parser.steps.push(Step::Combinator(Combinator::Descendant));
-		}
-
 		loop {
 			let saw_whitespace = parser.skip_whitespace();
 			if parser.is_eof() {
@@ -76,7 +68,7 @@ impl<'a> Parser<'a> {
 				let combinator_position = parser.position;
 				parser.bump();
 
-				if parser.last_is_combinator() {
+				if parser.last_is_combinator() || parser.steps.is_empty() {
 					return Err(parser.error_at(combinator_position, parser.position, ParseSelectorErrorKind::InvalidSelector));
 				}
 
@@ -84,7 +76,7 @@ impl<'a> Parser<'a> {
 				continue;
 			}
 
-			if saw_whitespace && !parser.last_is_combinator() {
+			if saw_whitespace && !parser.steps.is_empty() && !parser.last_is_combinator() {
 				parser.steps.push(Step::Combinator(Combinator::Descendant));
 			}
 

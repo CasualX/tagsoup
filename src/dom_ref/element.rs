@@ -85,7 +85,7 @@ impl<'a> Element<'a> {
 	pub fn query_selector(&self, selector: &str) -> Option<&Element<'a>> {
 		let steps = selector::parser::Parser::parse(selector).expect(selector);
 		let mut result = None;
-		dfs::query(&self.children, &steps, &mut |element| {
+		query(&self.children, &steps, &mut |element| {
 			result = Some(element);
 			false
 		});
@@ -100,7 +100,7 @@ impl<'a> Element<'a> {
 	pub fn query_selector_all(&self, selector: &str) -> Vec<&Element<'a>> {
 		let steps = selector::parser::Parser::parse(selector).expect(selector);
 		let mut result = Vec::new();
-		dfs::query(&self.children, &steps, &mut |element| {
+		query(&self.children, &steps, &mut |element| {
 			result.push(element);
 			true
 		});

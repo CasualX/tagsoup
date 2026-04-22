@@ -1,20 +1,20 @@
 use super::*;
 
 mod attributes;
-mod dfs;
+// mod dfs;
 mod doctype;
 mod document;
 mod element;
-mod map;
 mod nodes;
 mod parser;
+mod query;
 
 pub use attributes::*;
 pub use doctype::*;
 pub use document::*;
 pub use element::*;
-pub use map::*;
 pub use nodes::*;
+use query::*;
 
 fn visit<'a, 'dom>(
 	children: &'dom [Node<'a>],
