@@ -16,13 +16,7 @@
       "comment": "Whitespaces in opening tag to the left"
     },
     {
-      "tag": "div",
-      "kind": "normal",
-      "children": [
-        {
-          "text": "Text"
-        }
-      ]
+      "text": "< div> Text"
     },
     {
       "comment": "Whitespaces in opening tag to the right"
@@ -44,10 +38,7 @@
       "kind": "normal",
       "children": [
         {
-          "text": "Text <"
-        },
-        {
-          "text": "/div>"
+          "text": "Text < /div>"
         },
         {
           "comment": "Whitespaces in closing tag to the right"
@@ -65,16 +56,7 @@
           "comment": "Whitespaces everywhere (should not work)"
         },
         {
-          "tag": "div",
-          "kind": "normal",
-          "children": [
-            {
-              "text": "Text <"
-            },
-            {
-              "text": "/ div >"
-            }
-          ]
+          "text": "< div > Text < / div >"
         }
       ]
     }

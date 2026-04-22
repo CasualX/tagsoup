@@ -21,6 +21,12 @@ impl SourceSpan {
 		}
 	}
 
+	/// Gets the byte range of the span.
+	#[inline]
+	pub fn range(&self) -> std::ops::Range<usize> {
+		self.start as usize..self.end as usize
+	}
+
 	/// Returns the line and column of the span in the source.
 	///
 	/// This runs in _O(n)_ time, where n is the length of the source.
@@ -29,7 +35,7 @@ impl SourceSpan {
 			return None;
 		}
 
-		let text = &source[self.start as usize..self.end as usize];
+		let text = &source[self.range()];
 		let (start_line, start_column) = line_col(self.start as usize, source);
 		let (end_line, end_column) = line_col(self.end as usize, source);
 		Some(ResolvedSpan {

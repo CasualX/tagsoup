@@ -72,12 +72,12 @@ mod tag;
 pub use attribute::*;
 pub use tag::*;
 
+
 mod dom_ref;
 mod element;
 mod entity;
 mod errors;
 mod map;
-mod tagsoup;
 mod selector;
 mod span;
 mod utils;
@@ -87,10 +87,11 @@ pub use dom_ref::*;
 pub use element::*;
 pub use errors::*;
 pub use map::*;
-use tagsoup::*;
 pub use span::*;
 pub use utils::*;
 pub use visit::*;
+
+pub mod lexer;
 
 #[cfg(debug_assertions)]
 #[inline]

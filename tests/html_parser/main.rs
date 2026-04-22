@@ -19,7 +19,7 @@ fn assert_snapshot(fn_name: &str, mut value: String) {
 	}
 
 	let expected = fs::read_to_string(&snapshot_path).unwrap_or_else(|err| {
-		panic!("snapshot file not found for {fn_name} ({err}). Run with UPDATE_SNAPSHOTS=1 to create it.")
+		panic!("Snapshot not found for {fn_name}: {err}.\nRun with UPDATE_SNAPSHOTS=1 to create it.")
 	});
 
 	let a = expected.find("---").map_or(0, |i| i + 3);
@@ -27,7 +27,7 @@ fn assert_snapshot(fn_name: &str, mut value: String) {
 	let expected = &expected[b..];
 
 	if expected != value {
-		panic!("snapshot mismatch for {fn_name}");
+		panic!("Snapshot mismatch for {fn_name}.\nRun with UPDATE_SNAPSHOTS=1 to update the snapshot and inspect the diff.");
 	}
 }
 

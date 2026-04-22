@@ -37,10 +37,10 @@ pub struct DoctypeNode<'a> {
 	#[cfg_attr(feature = "serde", serde(skip))]
 	pub name_span: SourceSpan,
 
-	/// Attributes of the doctype.
+	/// Arguments of the doctype.
 	///
 	/// This is `html` in `<!DOCTYPE html>`.
-	pub attributes: Vec<Attribute<'a>>,
+	pub args: Vec<AttributeValue<'a>>,
 
 	/// Span of the doctype in the parsed source.
 	#[cfg_attr(feature = "serde", serde(skip))]

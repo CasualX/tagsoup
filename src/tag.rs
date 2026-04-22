@@ -172,6 +172,9 @@ pub TagId {
 	Tt: "tt",
 	Xmp: "xmp",
 
+	Doctype: "DOCTYPE",
+	Xml: "xml",
+
 	// SVG elements
 	// https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element
 	Animate: "animate",

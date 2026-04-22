@@ -126,8 +126,8 @@ fn keeps_doctypes_and_processing_instructions_in_document_order() {
 
 	let doctype = doc.children[1].doctype().unwrap();
 	assert_eq!(doctype.name, "DOCTYPE");
-	assert_eq!(doctype.attributes.len(), 1);
-	assert_eq!(doctype.attributes[0].key, "html");
+	assert_eq!(doctype.args.len(), 1);
+	assert_eq!(doctype.args[0].value_raw(), "html");
 
 	let div = doc.children[2].element().unwrap();
 	assert_eq!(div.tag, "div");
@@ -148,7 +148,7 @@ fn keeps_non_element_markup_inside_open_elements() {
 
 	let doctype = root.children[1].doctype().unwrap();
 	assert_eq!(doctype.name, "DOCTYPE");
-	assert_eq!(doctype.attributes[0].key, "html");
+	assert_eq!(doctype.args[0].value_raw(), "html");
 
 	assert_eq!(root.children[2].element().map(|element| element.tag), Some("child"));
 	assert_eq!(root.span, SourceSpan::new(0, 54));

@@ -8,9 +8,9 @@
     },
     {
       "name": "DOCTYPE",
-      "attributes": [
+      "args": [
         {
-          "key": "html"
+          "value": "html"
         }
       ]
     },

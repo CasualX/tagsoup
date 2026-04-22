@@ -149,9 +149,9 @@ fn format_element(element: &tagsoup::Element<'_>) -> impl fmt::Display {
 fn format_doctype(doctype: &tagsoup::DoctypeNode<'_>) -> impl fmt::Display {
 	fmt::from_fn(move |f| {
 		write!(f, "{DOCTYPE_NAME}{}{RESET}", doctype.name)?;
-		if !doctype.attributes.is_empty() {
+		if !doctype.args.is_empty() {
 			write!(f, "{ATTR_PUNCT}:{RESET}")?;
-			write_attributes(f, &doctype.attributes, DOCTYPE_ARGS, DOCTYPE_ARGS)?;
+			write_doctype_args(f, &doctype.args, DOCTYPE_ARGS)?;
 		}
 		Ok(())
 	})
@@ -170,6 +170,13 @@ fn write_attributes(f: &mut fmt::Formatter<'_>, attributes: &[tagsoup::Attribute
 		if let Some(value) = &attr.value {
 			write!(f, "{ATTR_PUNCT}={RESET}{value_color}{:?}{RESET}", value.value)?;
 		}
+	}
+	Ok(())
+}
+
+fn write_doctype_args(f: &mut fmt::Formatter<'_>, args: &[tagsoup::AttributeValue<'_>], value_color: &str) -> fmt::Result {
+	for arg in args {
+		write!(f, " {value_color}{:?}{RESET}", arg.value)?;
 	}
 	Ok(())
 }
