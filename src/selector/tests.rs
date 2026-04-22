@@ -1,4 +1,4 @@
-use super::super::*;
+use super::*;
 
 #[test]
 fn parses_compound_selector_with_implicit_descendant() {

@@ -1,14 +1,19 @@
 use super::*;
 
 mod attributes;
+mod dfs;
+mod doctype;
 mod document;
 mod element;
+mod map;
 mod nodes;
 mod parser;
 
 pub use attributes::*;
+pub use doctype::*;
 pub use document::*;
 pub use element::*;
+pub use map::*;
 pub use nodes::*;
 
 fn visit<'a, 'dom>(

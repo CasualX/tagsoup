@@ -2,14 +2,19 @@ use super::*;
 
 /// Value of an attribute.
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct AttributeValue<'a> {
 	/// The value of the attribute, including quotes if they exist.
 	pub value: &'a str,
 
 	/// Span of the attribute value in the parsed source, including quotes if they exist.
-	#[cfg_attr(feature = "serde", serde(skip))]
 	pub span: SourceSpan,
+}
+
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for AttributeValue<'a> {
+	fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+		serializer.serialize_str(self.value_raw())
+	}
 }
 
 impl<'a> AttributeValue<'a> {
@@ -49,7 +54,7 @@ pub struct Attribute<'a> {
 	pub key: &'a str,
 
 	/// The value of the attribute, if it exists.
-	#[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none", serialize_with = "serialize_attr_value"))]
+	#[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
 	pub value: Option<AttributeValue<'a>>,
 
 	/// Span of the attribute key in the parsed source.
@@ -59,15 +64,4 @@ pub struct Attribute<'a> {
 	/// Span of the attribute in the parsed source.
 	#[cfg_attr(feature = "serde", serde(skip))]
 	pub span: SourceSpan,
-}
-
-#[cfg(feature = "serde")]
-fn serialize_attr_value<'a, S: serde::Serializer>(
-	value: &Option<AttributeValue<'a>>,
-	serializer: S,
-) -> Result<S::Ok, S::Error> {
-	match value {
-		Some(attr_value) => serializer.serialize_some(&attr_value.value_raw()),
-		None => serializer.serialize_none(),
-	}
 }

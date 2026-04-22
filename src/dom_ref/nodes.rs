@@ -24,29 +24,6 @@ pub struct CommentNode<'a> {
 	pub span: SourceSpan,
 }
 
-/// Doctype node in the DOM tree.
-#[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct DoctypeNode<'a> {
-	/// The name of the doctype.
-	///
-	/// This is `DOCTYPE` in `<!DOCTYPE html>`.
-	pub name: &'a str,
-
-	/// Span of the doctype name in the parsed source.
-	#[cfg_attr(feature = "serde", serde(skip))]
-	pub name_span: SourceSpan,
-
-	/// Arguments of the doctype.
-	///
-	/// This is `html` in `<!DOCTYPE html>`.
-	pub args: Vec<AttributeValue<'a>>,
-
-	/// Span of the doctype in the parsed source.
-	#[cfg_attr(feature = "serde", serde(skip))]
-	pub span: SourceSpan,
-}
-
 /// Processing instruction node in the DOM tree.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]

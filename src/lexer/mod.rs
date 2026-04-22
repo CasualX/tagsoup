@@ -14,6 +14,7 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[0].span.range()], "xml");
 	/// ```
 	PIOpen,
+
 	/// The end of a processing instruction, i.e. `?>`.
 	///
 	/// ```
@@ -23,6 +24,7 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[1].span.range()], "?>");
 	/// ```
 	PIClose,
+
 	/// An HTML comment token, including the full `<!-- ... -->` text.
 	///
 	/// ```
@@ -32,6 +34,7 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[0].span.range()], "<!-- comment -->");
 	/// ```
 	Comment,
+
 	/// A CDATA section token, including the full `<![CDATA[ ... ]]>` text.
 	///
 	/// ```
@@ -41,6 +44,7 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[0].span.range()], "<![CDATA[x < y]]>");
 	/// ```
 	CData,
+
 	/// The identifier after `<!`, such as `DOCTYPE`.
 	///
 	/// ```
@@ -50,6 +54,7 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[0].span.range()], "DOCTYPE");
 	/// ```
 	DocTypeOpen,
+
 	/// A value inside a doctype declaration.
 	///
 	/// ```
@@ -59,6 +64,27 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[1].span.range()], "html");
 	/// ```
 	DocTypeValue,
+
+	/// The `[` character starting the DTD subset in a doctype declaration.
+	///
+	/// ```
+	/// let input = "<!DOCTYPE html [ ... ]>";
+	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[2].kind, tagsoup::lexer::TokenKind::DocTypeSubsetOpen);
+	/// assert_eq!(&input[tokens[2].span.range()], "[");
+	/// ```
+	DocTypeSubsetOpen,
+
+	/// The `]` character ending the DTD subset in a doctype declaration.
+	///
+	/// ```
+	/// let input = "<!DOCTYPE html [ ... ]>";
+	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[4].kind, tagsoup::lexer::TokenKind::DocTypeSubsetClose);
+	/// assert_eq!(&input[tokens[4].span.range()], "]");
+	/// ```
+	DocTypeSubsetClose,
+
 	/// The closing `>` of a doctype declaration.
 	///
 	/// ```
@@ -68,6 +94,7 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[2].span.range()], ">");
 	/// ```
 	DocTypeClose,
+
 	/// The tag name after `<`, such as `div`.
 	///
 	/// ```
@@ -77,6 +104,7 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[0].span.range()], "div");
 	/// ```
 	TagOpen,
+
 	/// The tag name after `</`, such as `div`.
 	///
 	/// ```
@@ -86,6 +114,7 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[0].span.range()], "div");
 	/// ```
 	EndTagOpen,
+
 	/// The closing `>` for a start tag or end tag.
 	///
 	/// ```
@@ -95,6 +124,7 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[1].span.range()], ">");
 	/// ```
 	TagClose,
+
 	/// The closing `/>` for a self-closing tag.
 	///
 	/// ```
@@ -104,6 +134,7 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[1].span.range()], "/>");
 	/// ```
 	TagSelfClose,
+
 	/// An attribute name inside a tag or processing instruction.
 	///
 	/// ```
@@ -113,6 +144,7 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[1].span.range()], "class");
 	/// ```
 	AttrName,
+
 	/// An attribute value without the leading `=`.
 	///
 	/// ```
@@ -122,6 +154,7 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[2].span.range()], "hero");
 	/// ```
 	AttrValue,
+
 	/// Text content outside of tags.
 	///
 	/// ```
@@ -131,6 +164,7 @@ pub enum TokenKind {
 	/// assert_eq!(&input[tokens[0].span.range()], "hello");
 	/// ```
 	Text,
+
 	/// An error token for unrecognized or malformed input.
 	///
 	/// Returned for malformed attributes, skipping until the next `>` character.
@@ -162,7 +196,8 @@ enum LexerState {
 	TagAttrValue, // After an attribute name, looking for its value
 	PIAttrs, // Inside a processing instruction, looking for attributes
 	PIAttrValue, // Inside a processing instruction, looking for its value
-	DocTypeValue, // Inside a doctype declaration
+	DocTypeElements, // Inside a doctype declaration, looking for elements
+	DocTypeValue, // Inside a doctype declaration, looking for values
 }
 
 /// Lexer for tokenizing TagSoup input.
@@ -174,6 +209,7 @@ enum LexerState {
 pub struct Lexer<'a> {
 	input: &'a [u8],
 	position: usize,
+	doctype_depth: u32,
 	state: LexerState,
 }
 
@@ -181,7 +217,7 @@ impl<'a> Lexer<'a> {
 	/// Constructor.
 	#[inline]
 	pub const fn new(input: &'a [u8]) -> Lexer<'a> {
-		Lexer { input, position: 0, state: LexerState::TagSoup }
+		Lexer { input, position: 0, doctype_depth: 0, state: LexerState::TagSoup }
 	}
 
 	#[inline]
@@ -458,16 +494,57 @@ impl<'a> Lexer<'a> {
 		Token { kind: TokenKind::AttrValue, span }
 	}
 
+	fn doctype_element(&mut self) -> Token {
+		self.whitespace();
+
+		let tail = &self.input[self.position..];
+
+		if tail.starts_with(b"<!") {
+			self.position += 2; // Skip '<!'
+			let span = self.tag();
+			self.state = LexerState::DocTypeValue;
+			Token { kind: TokenKind::DocTypeOpen, span }
+		}
+		else if tail.starts_with(b"]") {
+			self.position += 1; // Skip ']'
+			if self.doctype_depth > 0 {
+				self.doctype_depth -= 1;
+			}
+			self.state = LexerState::DocTypeValue;
+			Token { kind: TokenKind::DocTypeSubsetClose, span: SourceSpan::new(self.position - 1, self.position) }
+		}
+		else {
+			// Text is not valid, skip until the next ']' or '<'
+			let span = self.slurp(|&c| !(c == b']' || c == b'<'));
+			Token { kind: TokenKind::Error, span }
+		}
+	}
+
 	fn doctype_value(&mut self) -> Token {
 		self.whitespace();
 
 		let start = self.position;
-		let tail = &self.input[self.position..];
+		let Some(&c) = self.input.get(self.position) else {
+			return Token { kind: TokenKind::Error, span: SourceSpan::new(start, start) };
+		};
 
-		if tail.starts_with(b">") {
+		if c == b'>' {
 			self.position += 1; // Skip '>'
-			self.state = LexerState::TagSoup;
+			self.state = if self.doctype_depth == 0 { LexerState::TagSoup } else { LexerState::DocTypeElements };
 			Token { kind: TokenKind::DocTypeClose, span: SourceSpan::new(start, self.position) }
+		}
+		else if c == b'[' {
+			self.position += 1; // Skip '['
+			self.doctype_depth += 1;
+			self.state = LexerState::DocTypeElements;
+			Token { kind: TokenKind::DocTypeSubsetOpen, span: SourceSpan::new(start, self.position) }
+		}
+		else if c == b']' {
+			self.position += 1; // Skip ']'
+			if self.doctype_depth > 0 {
+				self.doctype_depth -= 1;
+			}
+			Token { kind: TokenKind::DocTypeSubsetClose, span: SourceSpan::new(start, self.position) }
 		}
 		else {
 			let span = self.value();
@@ -495,6 +572,7 @@ impl<'a> Iterator for Lexer<'a> {
 			LexerState::TagAttrValue => Some(self.tag_attrs_value()),
 			LexerState::PIAttrs => Some(self.pi_attrs()),
 			LexerState::PIAttrValue => Some(self.pi_attrs_value()),
+			LexerState::DocTypeElements => Some(self.doctype_element()),
 			LexerState::DocTypeValue => Some(self.doctype_value()),
 		}
 	}

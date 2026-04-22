@@ -57,17 +57,13 @@ fn strip_quotes(value: &str) -> &str {
 }
 
 fn build_doctype<'a>(
-	tag: &'a str,
-	tag_span: SourceSpan,
+	keyword: &'a str,
+	keyword_span: SourceSpan,
 	args: Vec<AttributeValue<'a>>,
+	dtd: Vec<DoctypeNode<'a>>,
 	span: SourceSpan,
 ) -> DoctypeNode<'a> {
-	DoctypeNode {
-		name: tag,
-		name_span: tag_span,
-		args,
-		span,
-	}
+	DoctypeNode { keyword, keyword_span, args, dtd, span }
 }
 
 fn build_processing_instruction<'a>(
@@ -76,12 +72,7 @@ fn build_processing_instruction<'a>(
 	data: Vec<Attribute<'a>>,
 	span: SourceSpan,
 ) -> ProcessingInstructionNode<'a> {
-	ProcessingInstructionNode {
-		target,
-		target_span,
-		data,
-		span,
-	}
+	ProcessingInstructionNode { target, target_span, data, span }
 }
 
 fn push_node<'a>(stack: &mut [OpenElement<'a>], children: &mut Vec<Node<'a>>, node: Node<'a>) {
@@ -316,43 +307,62 @@ impl<'a> Parser<'a> {
 		);
 	}
 
-	fn parse_doctype(&mut self, tag_span: SourceSpan) {
-		let tag = self.text_for_span(tag_span);
-		let open_span = Self::markup_open_span(tag_span);
+	fn parse_doctype_node(&mut self, keyword_span: SourceSpan) -> DoctypeNode<'a> {
+		let keyword = self.text_for_span(keyword_span);
+		let open_span = Self::markup_open_span(keyword_span);
 		let mut args = Vec::new();
+		let mut dtd = Vec::new();
+		let mut span = open_span;
+		let mut subset_depth = 0usize;
 
 		loop {
 			let Some(token) = self.lexer.next() else {
 				self.errors.push(ParseError { span: open_span, kind: ParseErrorKind::UnterminatedDoctype });
-				push_node(
-					self.stack.as_mut_slice(),
-					&mut self.children,
-					Node::Doctype(build_doctype(tag, tag_span, args, open_span)),
-				);
-				return;
+				return build_doctype(keyword, keyword_span, args, dtd, span);
 			};
 
 			match token.kind {
 				lexer::TokenKind::DocTypeValue => {
-					let span = token.span;
-					args.push(AttributeValue { value: strip_quotes(self.text_for_span(span)), span });
+					let value_span = token.span;
+					args.push(AttributeValue { value: strip_quotes(self.text_for_span(value_span)), span: value_span });
+					span = combined_span(span, value_span);
+				}
+				lexer::TokenKind::DocTypeOpen => {
+					let child = self.parse_doctype_node(token.span);
+					span = combined_span(span, child.span);
+					dtd.push(child);
+				}
+				lexer::TokenKind::DocTypeSubsetOpen => {
+					subset_depth += 1;
+					span = combined_span(span, token.span);
+				}
+				lexer::TokenKind::DocTypeSubsetClose => {
+					if subset_depth == 0 {
+						self.errors.push(ParseError { span: token.span, kind: ParseErrorKind::UnexpectedToken });
+					}
+					else {
+						subset_depth -= 1;
+					}
+					span = combined_span(span, token.span);
 				}
 				lexer::TokenKind::DocTypeClose => {
-					push_node(
-						self.stack.as_mut_slice(),
-						&mut self.children,
-						Node::Doctype(build_doctype(tag, tag_span, args, combined_span(open_span, token.span))),
-					);
-					return;
+					return build_doctype(keyword, keyword_span, args, dtd, combined_span(span, token.span));
 				}
 				lexer::TokenKind::Error => {
 					self.errors.push(ParseError { span: token.span, kind: ParseErrorKind::InvalidAttribute });
+					span = combined_span(span, token.span);
 				}
 				_ => {
 					self.errors.push(ParseError { span: token.span, kind: ParseErrorKind::UnexpectedToken });
+					span = combined_span(span, token.span);
 				}
 			}
 		}
+	}
+
+	fn parse_doctype(&mut self, tag_span: SourceSpan) {
+		let doctype = self.parse_doctype_node(tag_span);
+		push_node(self.stack.as_mut_slice(), &mut self.children, Node::Doctype(doctype));
 	}
 
 	fn parse_processing_instruction(&mut self, target_span: SourceSpan) {

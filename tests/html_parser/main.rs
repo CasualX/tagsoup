@@ -55,6 +55,7 @@ macro_rules! assert_debug_snapshot {
 }
 
 mod comments;
+mod doctype;
 mod document;
 mod document_empty;
 mod document_fragment;

@@ -1,11 +1,9 @@
 {
   "children": [
     {
-      "name": "DOCTYPE",
+      "keyword": "DOCTYPE",
       "args": [
-        {
-          "value": "html"
-        }
+        "html"
       ]
     },
     {

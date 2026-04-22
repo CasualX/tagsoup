@@ -21,7 +21,7 @@ Loosely based on the [HTML Living Standard](https://html.spec.whatwg.org/multipa
 - Supports tree walking with a small visitor API.
 - Tries to recover from malformed markup instead of giving up immediately.
 
-# Example
+# Examples
 
 ```
 // Parse an HTML tag soup.
@@ -73,25 +73,23 @@ pub use attribute::*;
 pub use tag::*;
 
 
-mod dom_ref;
 mod element;
 mod entity;
 mod errors;
-mod map;
 mod selector;
 mod span;
 mod utils;
 mod visit;
 
-pub use dom_ref::*;
 pub use element::*;
 pub use errors::*;
-pub use map::*;
 pub use span::*;
 pub use utils::*;
 pub use visit::*;
 
 pub mod lexer;
+mod dom_ref;
+pub use dom_ref::*;
 
 #[cfg(debug_assertions)]
 #[inline]

@@ -270,18 +270,6 @@ fn test_unquoted_attr_value_absorbs_self_close_slash() {
 }
 
 #[test]
-fn test_valid_xml_doctype_internal_subset_is_not_supported() {
-	assert_tokens("<!DOCTYPE root [ <!ELEMENT root ANY> ]>", &[
-		(TokenKind::DocTypeOpen, "DOCTYPE"),
-		(TokenKind::DocTypeValue, "root"),
-		(TokenKind::DocTypeValue, "["),
-		(TokenKind::Error, "<!ELEMENT root ANY"),
-		(TokenKind::DocTypeClose, ">"),
-		(TokenKind::Text, " ]>"),
-	]);
-}
-
-#[test]
 fn test_unicode_xml_names_are_not_lexed_as_tags() {
 	assert_tokens("<é attr=1>", &[
 		(TokenKind::TagOpen, "é"),
@@ -332,4 +320,19 @@ fn test_raw_text_helper_stops_at_matching_close_tag_boundary() {
 	let span = lexer.raw_text(b"script");
 	assert_eq!(&input[span.range()], "body</scriptx>tail");
 	assert_eq!(lexer.position, input.len());
+}
+
+#[test]
+fn test_doctype_value_with_nested_brackets() {
+	assert_tokens("<!DOCTYPE html [<!ELEMENT test ANY>]>", &[
+		(TokenKind::DocTypeOpen, "DOCTYPE"),
+		(TokenKind::DocTypeValue, "html"),
+		(TokenKind::DocTypeSubsetOpen, "["),
+		(TokenKind::DocTypeOpen, "ELEMENT"),
+		(TokenKind::DocTypeValue, "test"),
+		(TokenKind::DocTypeValue, "ANY"),
+		(TokenKind::DocTypeClose, ">"),
+		(TokenKind::DocTypeSubsetClose, "]"),
+		(TokenKind::DocTypeClose, ">"),
+	]);
 }

@@ -3,7 +3,7 @@ use std::io::Read;
 
 const RESET: &str = "\x1b[0m";
 const TREE_GUIDE: &str = "\x1b[38;5;244m";
-const DOCTYPE_NAME: &str = "\x1b[38;5;246m";
+const DOCTYPE_KEYWORD: &str = "\x1b[38;5;246m";
 const DOCTYPE_ARGS: &str = "\x1b[38;5;80m";
 const PI_TARGET: &str = "\x1b[38;5;246m";
 const PI_ARGS: &str = "\x1b[38;5;80m";
@@ -148,7 +148,7 @@ fn format_element(element: &tagsoup::Element<'_>) -> impl fmt::Display {
 
 fn format_doctype(doctype: &tagsoup::DoctypeNode<'_>) -> impl fmt::Display {
 	fmt::from_fn(move |f| {
-		write!(f, "{DOCTYPE_NAME}{}{RESET}", doctype.name)?;
+		write!(f, "{DOCTYPE_KEYWORD}{}{RESET}", doctype.keyword)?;
 		if !doctype.args.is_empty() {
 			write!(f, "{ATTR_PUNCT}:{RESET}")?;
 			write_doctype_args(f, &doctype.args, DOCTYPE_ARGS)?;

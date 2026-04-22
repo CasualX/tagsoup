@@ -36,7 +36,7 @@ pub AttributeId {
 	Crossorigin: "crossorigin",
 	Csp: "csp",
 	Data: "data",
-	DataStar: "data*",
+	DataStar: "data-*",
 	Datetime: "datetime",
 	Decoding: "decoding",
 	Default: "default",

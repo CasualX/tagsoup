@@ -125,12 +125,43 @@ fn keeps_doctypes_and_processing_instructions_in_document_order() {
 	assert_eq!(pi.data[0].value.as_ref().map(|value| value.value), Some("1.0"));
 
 	let doctype = doc.children[1].doctype().unwrap();
-	assert_eq!(doctype.name, "DOCTYPE");
+	assert_eq!(doctype.keyword, "DOCTYPE");
 	assert_eq!(doctype.args.len(), 1);
 	assert_eq!(doctype.args[0].value_raw(), "html");
 
 	let div = doc.children[2].element().unwrap();
 	assert_eq!(div.tag, "div");
+}
+
+#[test]
+fn nests_internal_subset_doctypes_under_the_parent_doctype() {
+	let doc = Document::parse("<!DOCTYPE html [<!ELEMENT test ANY><!ATTLIST test id ID #REQUIRED>]>");
+	assert_eq!(doc.errors, vec![]);
+	assert_eq!(doc.children.len(), 1);
+
+	let doctype = doc.children[0].doctype().unwrap();
+	assert_eq!(doctype.keyword, "DOCTYPE");
+	assert_eq!(doctype.args.len(), 1);
+	assert_eq!(doctype.args[0].value_raw(), "html");
+	assert_eq!(doctype.dtd.len(), 2);
+	assert_eq!(doctype.span, SourceSpan::new(0, 68));
+
+	let element = &doctype.dtd[0];
+	assert_eq!(element.keyword, "ELEMENT");
+	assert_eq!(element.args.len(), 2);
+	assert_eq!(element.args[0].value_raw(), "test");
+	assert_eq!(element.args[1].value_raw(), "ANY");
+	assert_eq!(element.dtd.len(), 0);
+
+	let attlist = &doctype.dtd[1];
+	assert_eq!(attlist.keyword, "ATTLIST");
+	assert_eq!(attlist.args.len(), 4);
+	assert_eq!(attlist.args[0].value_raw(), "test");
+	assert_eq!(attlist.args[1].value_raw(), "id");
+	assert_eq!(attlist.args[2].value_raw(), "ID");
+	assert_eq!(attlist.args[3].value_raw(), "#REQUIRED");
+	assert_eq!(attlist.dtd.len(), 0);
+	assert_eq!(attlist.span, SourceSpan::new(35, 66));
 }
 
 #[test]
@@ -147,7 +178,7 @@ fn keeps_non_element_markup_inside_open_elements() {
 	assert_eq!(pi.data[0].value.as_ref().map(|value| value.value), Some("test"));
 
 	let doctype = root.children[1].doctype().unwrap();
-	assert_eq!(doctype.name, "DOCTYPE");
+	assert_eq!(doctype.keyword, "DOCTYPE");
 	assert_eq!(doctype.args[0].value_raw(), "html");
 
 	assert_eq!(root.children[2].element().map(|element| element.tag), Some("child"));

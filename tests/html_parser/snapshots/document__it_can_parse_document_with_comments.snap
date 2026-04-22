@@ -7,11 +7,9 @@
       "comment": "comment"
     },
     {
-      "name": "DOCTYPE",
+      "keyword": "DOCTYPE",
       "args": [
-        {
-          "value": "html"
-        }
+        "html"
       ]
     },
     {
