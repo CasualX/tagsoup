@@ -103,7 +103,7 @@ Parsing Notes
 There is also a tiny example CLI that reads HTML from stdin and dumps JSON:
 
 ```bash
-cargo run --example tagsoup -- --pretty < page.html
+cargo run --example tagsoup -- -ftree -i input.html
 ```
 
 What This Is Not
