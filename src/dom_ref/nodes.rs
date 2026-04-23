@@ -59,6 +59,19 @@ pub enum Node<'a> {
 	ProcessingInstruction(ProcessingInstructionNode<'a>),
 }
 
+impl Node<'_> {
+	/// Gets the span of the node in the parsed source.
+	pub fn span(&self) -> SourceSpan {
+		match self {
+			Node::Text(t) => t.span,
+			Node::Element(e) => e.span,
+			Node::Comment(c) => c.span,
+			Node::Doctype(d) => d.span,
+			Node::ProcessingInstruction(pi) => pi.span,
+		}
+	}
+}
+
 impl<'a> Node<'a> {
 	#[inline]
 	pub fn text(&self) -> Option<&TextNode<'a>> {

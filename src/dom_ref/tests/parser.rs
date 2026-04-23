@@ -122,7 +122,7 @@ fn keeps_doctypes_and_processing_instructions_in_document_order() {
 	assert_eq!(pi.target, "xml");
 	assert_eq!(pi.data.len(), 1);
 	assert_eq!(pi.data[0].key, "version");
-	assert_eq!(pi.data[0].value.as_ref().map(|value| value.value), Some("1.0"));
+	assert_eq!(pi.data[0].value.as_ref().map(|value| value.value_raw()), Some("1.0"));
 
 	let doctype = doc.children[1].doctype().unwrap();
 	assert_eq!(doctype.keyword, "DOCTYPE");
@@ -175,7 +175,7 @@ fn keeps_non_element_markup_inside_open_elements() {
 	let pi = root.children[0].processing_instruction().unwrap();
 	assert_eq!(pi.target, "pi");
 	assert_eq!(pi.data[0].key, "mode");
-	assert_eq!(pi.data[0].value.as_ref().map(|value| value.value), Some("test"));
+	assert_eq!(pi.data[0].value.as_ref().map(|value| value.value_raw()), Some("test"));
 
 	let doctype = root.children[1].doctype().unwrap();
 	assert_eq!(doctype.keyword, "DOCTYPE");

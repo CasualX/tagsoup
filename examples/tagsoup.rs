@@ -203,7 +203,7 @@ fn write_attributes(f: &mut fmt::Formatter<'_>, attributes: &[tagsoup::Attribute
 	for attr in attributes {
 		write!(f, " {key_color}{}{RESET}", attr.key)?;
 		if let Some(value) = &attr.value {
-			write!(f, "{ATTR_PUNCT}={RESET}{value_color}{:?}{RESET}", value.value)?;
+			write!(f, "{ATTR_PUNCT}={RESET}{value_color}{:?}{RESET}", value.value_raw())?;
 		}
 	}
 	Ok(())
@@ -211,7 +211,7 @@ fn write_attributes(f: &mut fmt::Formatter<'_>, attributes: &[tagsoup::Attribute
 
 fn write_doctype_args(f: &mut fmt::Formatter<'_>, args: &[tagsoup::AttributeValue<'_>], value_color: &str) -> fmt::Result {
 	for arg in args {
-		write!(f, " {value_color}{:?}{RESET}", arg.value)?;
+		write!(f, " {value_color}{:?}{RESET}", arg.value_raw())?;
 	}
 	Ok(())
 }

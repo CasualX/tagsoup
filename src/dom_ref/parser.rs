@@ -27,100 +27,20 @@ struct Parser<'a> {
 	pending_attribute: Option<PendingAttribute<'a>>,
 }
 
-fn node_span(node: &Node<'_>) -> SourceSpan {
-	match node {
-		Node::Text(text) => text.span,
-		Node::Element(element) => element.span,
-		Node::Comment(comment) => comment.span,
-		Node::Doctype(doctype) => doctype.span,
-		Node::ProcessingInstruction(pi) => pi.span,
-	}
-}
-
 fn update_element_id<'a>(id: &mut Option<&'a str>, key: &'a str, value: Option<&AttributeValue<'a>>) {
 	if key == "id" && id.is_none() {
-		*id = value.map(|value| value.value);
+		*id = value.map(|value| value.value_raw());
 	}
-}
-
-fn strip_quotes(value: &str) -> &str {
-	let bytes = value.as_bytes();
-	if bytes.len() >= 2 {
-		let first = bytes[0];
-		let last = bytes[bytes.len() - 1];
-		if (first == b'"' && last == b'"') || (first == b'\'' && last == b'\'') {
-			return unsafe_as_str(&bytes[1..bytes.len() - 1]);
-		}
-	}
-
-	value
-}
-
-fn build_doctype<'a>(
-	keyword: &'a str,
-	keyword_span: SourceSpan,
-	args: Vec<AttributeValue<'a>>,
-	dtd: Vec<DoctypeNode<'a>>,
-	span: SourceSpan,
-) -> DoctypeNode<'a> {
-	DoctypeNode { keyword, keyword_span, args, dtd, span }
-}
-
-fn build_processing_instruction<'a>(
-	target: &'a str,
-	target_span: SourceSpan,
-	data: Vec<Attribute<'a>>,
-	span: SourceSpan,
-) -> ProcessingInstructionNode<'a> {
-	ProcessingInstructionNode { target, target_span, data, span }
 }
 
 fn push_node<'a>(stack: &mut [OpenElement<'a>], children: &mut Vec<Node<'a>>, node: Node<'a>) {
-	let span = node_span(&node);
+	let span = node.span();
 	if let Some(parent) = stack.last_mut() {
 		parent.element.span = combined_span(parent.element.span, span);
 		parent.element.children.push(node);
 	}
 	else {
 		children.push(node);
-	}
-}
-
-fn push_text_node<'a>(stack: &mut [OpenElement<'a>], children: &mut Vec<Node<'a>>, input: &'a str, span: SourceSpan) {
-	let target = if let Some(parent) = stack.last_mut() {
-		parent.element.span = combined_span(parent.element.span, span);
-		&mut parent.element.children
-	}
-	else {
-		children
-	};
-
-	if let Some(Node::Text(previous)) = target.last_mut()
-		&& previous.span.end == span.start
-	{
-		previous.span = combined_span(previous.span, span);
-		previous.text = &input[previous.span.range()];
-		return;
-	}
-
-	target.push(Node::Text(TextNode { text: &input[span.range()], span }));
-}
-
-fn build_element<'a>(
-	id: Option<&'a str>,
-	tag: &'a str,
-	tag_span: SourceSpan,
-	attributes: Vec<Attribute<'a>>,
-	span: SourceSpan,
-) -> Element<'a> {
-	Element {
-		id,
-		tag,
-		tag_span,
-		kind: ElementKind::from_tag(tag),
-		attributes,
-		children: Vec::new(),
-		span,
 	}
 }
 
@@ -155,6 +75,10 @@ fn recover_to_matching_close<'a>(
 	true
 }
 
+pub fn parse<'a>(input: &'a str) -> Document<'a> {
+	Parser::new(input).parse()
+}
+
 impl<'a> Parser<'a> {
 	fn new(input: &'a str) -> Self {
 		Self {
@@ -171,18 +95,6 @@ impl<'a> Parser<'a> {
 
 	fn text_for_span(&self, span: SourceSpan) -> &'a str {
 		self.input.get(span.range()).unwrap_or("")
-	}
-
-	fn tag_open_span(tag_span: SourceSpan) -> SourceSpan {
-		SourceSpan { start: tag_span.start.saturating_sub(1), end: tag_span.end }
-	}
-
-	fn end_tag_open_span(tag_span: SourceSpan) -> SourceSpan {
-		SourceSpan { start: tag_span.start.saturating_sub(2), end: tag_span.end }
-	}
-
-	fn markup_open_span(tag_span: SourceSpan) -> SourceSpan {
-		SourceSpan { start: tag_span.start.saturating_sub(2), end: tag_span.end }
 	}
 
 	fn clear_attribute_state(&mut self) {
@@ -210,7 +122,7 @@ impl<'a> Parser<'a> {
 		};
 
 		let value = AttributeValue {
-			value: strip_quotes(self.text_for_span(value_span)),
+			value: self.text_for_span(value_span),
 			span: value_span,
 		};
 		update_element_id(&mut self.current_id, attribute.key, Some(&value));
@@ -245,7 +157,9 @@ impl<'a> Parser<'a> {
 						key_span: token.span,
 					});
 				}
-				lexer::TokenKind::AttrValue => self.push_pending_attribute_with_value(token.span),
+				lexer::TokenKind::AttrValue => {
+					self.push_pending_attribute_with_value(token.span);
+				}
 				lexer::TokenKind::TagClose => {
 					self.push_pending_attribute_without_value();
 					return Some(TagEnd::Close(token.span));
@@ -270,46 +184,53 @@ impl<'a> Parser<'a> {
 	}
 
 	fn push_text(&mut self, span: SourceSpan) {
-		push_text_node(self.stack.as_mut_slice(), &mut self.children, self.input, span);
+		let target = if let Some(parent) = self.stack.last_mut() {
+			parent.element.span = combined_span(parent.element.span, span);
+			&mut parent.element.children
+		}
+		else {
+			&mut self.children
+		};
+
+		// Coalesce adjacent text nodes.
+		if let Some(Node::Text(previous)) = target.last_mut() && previous.span.end == span.start {
+			previous.span = combined_span(previous.span, span);
+			previous.text = &self.input[previous.span.range()];
+			return;
+		}
+
+		target.push(Node::Text(TextNode { text: &self.input[span.range()], span }));
 	}
 
 	fn parse_comment(&mut self, span: SourceSpan) {
-		let text = self.text_for_span(span);
-		let comment = if let Some(inner) = text.strip_prefix("<!--").and_then(|value| value.strip_suffix("-->")) {
-			inner
-		}
-		else {
-			self.errors.push(ParseError { span, kind: ParseErrorKind::UnterminatedComment });
-			text.strip_prefix("<!--").unwrap_or(text)
-		};
+		let outer_text = self.text_for_span(span);
 
-		push_node(
-			self.stack.as_mut_slice(),
-			&mut self.children,
-			Node::Comment(CommentNode { comment, span }),
-		);
+		if !outer_text.ends_with("-->") {
+			self.errors.push(ParseError { span, kind: ParseErrorKind::UnterminatedComment });
+		}
+
+		let comment = outer_text.strip_prefix("<!--").unwrap_or(outer_text).strip_suffix("-->").unwrap_or(outer_text);
+		let comment_node = CommentNode { comment, span };
+
+		push_node(self.stack.as_mut_slice(), &mut self.children, Node::Comment(comment_node));
 	}
 
 	fn parse_cdata(&mut self, span: SourceSpan) {
 		let text = self.text_for_span(span);
-		let cdata = if let Some(inner) = text.strip_prefix("<![CDATA[").and_then(|value| value.strip_suffix("]]>") ) {
-			inner
-		}
-		else {
-			self.errors.push(ParseError { span, kind: ParseErrorKind::UnterminatedCData });
-			text.strip_prefix("<![CDATA[").unwrap_or(text)
-		};
 
-		push_node(
-			self.stack.as_mut_slice(),
-			&mut self.children,
-			Node::Text(TextNode { text: cdata, span }),
-		);
+		if !text.ends_with("]]>") {
+			self.errors.push(ParseError { span, kind: ParseErrorKind::UnterminatedCData });
+		}
+
+		let text = text.strip_prefix("<![CDATA[").unwrap_or(text).strip_suffix("]]>").unwrap_or(text);
+		let text_node = TextNode { text, span };
+
+		push_node(self.stack.as_mut_slice(), &mut self.children, Node::Text(text_node));
 	}
 
 	fn parse_doctype_node(&mut self, keyword_span: SourceSpan) -> DoctypeNode<'a> {
 		let keyword = self.text_for_span(keyword_span);
-		let open_span = Self::markup_open_span(keyword_span);
+		let open_span = markup_open_span(keyword_span);
 		let mut args = Vec::new();
 		let mut dtd = Vec::new();
 		let mut span = open_span;
@@ -318,13 +239,13 @@ impl<'a> Parser<'a> {
 		loop {
 			let Some(token) = self.lexer.next() else {
 				self.errors.push(ParseError { span: open_span, kind: ParseErrorKind::UnterminatedDoctype });
-				return build_doctype(keyword, keyword_span, args, dtd, span);
+				return DoctypeNode { keyword, keyword_span, args, dtd, span };
 			};
 
 			match token.kind {
 				lexer::TokenKind::DocTypeValue => {
 					let value_span = token.span;
-					args.push(AttributeValue { value: strip_quotes(self.text_for_span(value_span)), span: value_span });
+					args.push(AttributeValue { value: self.text_for_span(value_span), span: value_span });
 					span = combined_span(span, value_span);
 				}
 				lexer::TokenKind::DocTypeOpen => {
@@ -346,7 +267,7 @@ impl<'a> Parser<'a> {
 					span = combined_span(span, token.span);
 				}
 				lexer::TokenKind::DocTypeClose => {
-					return build_doctype(keyword, keyword_span, args, dtd, combined_span(span, token.span));
+					return DoctypeNode { keyword, keyword_span, args, dtd, span: combined_span(span, token.span) };
 				}
 				lexer::TokenKind::Error => {
 					self.errors.push(ParseError { span: token.span, kind: ParseErrorKind::InvalidAttribute });
@@ -367,18 +288,15 @@ impl<'a> Parser<'a> {
 
 	fn parse_processing_instruction(&mut self, target_span: SourceSpan) {
 		let target = self.text_for_span(target_span);
-		let open_span = Self::markup_open_span(target_span);
+		let open_span = markup_open_span(target_span);
 		self.clear_attribute_state();
 
 		loop {
 			let Some(token) = self.lexer.next() else {
-				let (attributes, _) = self.take_attributes();
+				let (data, _) = self.take_attributes();
 				self.errors.push(ParseError { span: open_span, kind: ParseErrorKind::UnterminatedProcessingInstruction });
-				push_node(
-					self.stack.as_mut_slice(),
-					&mut self.children,
-					Node::ProcessingInstruction(build_processing_instruction(target, target_span, attributes, open_span)),
-				);
+				let pi_node = ProcessingInstructionNode { target, target_span, data, span: open_span };
+				push_node(self.stack.as_mut_slice(), &mut self.children, Node::ProcessingInstruction(pi_node));
 				return;
 			};
 
@@ -390,34 +308,20 @@ impl<'a> Parser<'a> {
 						key_span: token.span,
 					});
 				}
-				lexer::TokenKind::AttrValue => self.push_pending_attribute_with_value(token.span),
+				lexer::TokenKind::AttrValue => {
+					self.push_pending_attribute_with_value(token.span);
+				}
 				lexer::TokenKind::PIClose => {
-					let (attributes, _) = self.take_attributes();
-					push_node(
-						self.stack.as_mut_slice(),
-						&mut self.children,
-						Node::ProcessingInstruction(build_processing_instruction(
-							target,
-							target_span,
-							attributes,
-							combined_span(open_span, token.span),
-						)),
-					);
+					let (data, _) = self.take_attributes();
+					let pi_node = ProcessingInstructionNode { target, target_span, data, span: combined_span(open_span, token.span) };
+					push_node(self.stack.as_mut_slice(), &mut self.children, Node::ProcessingInstruction(pi_node));
 					return;
 				}
 				lexer::TokenKind::TagClose => {
-					let (attributes, _) = self.take_attributes();
+					let (data, _) = self.take_attributes();
 					self.errors.push(ParseError { span: token.span, kind: ParseErrorKind::UnterminatedProcessingInstruction });
-					push_node(
-						self.stack.as_mut_slice(),
-						&mut self.children,
-						Node::ProcessingInstruction(build_processing_instruction(
-							target,
-							target_span,
-							attributes,
-							combined_span(open_span, token.span),
-						)),
-					);
+					let pi_node = ProcessingInstructionNode { target, target_span, data, span: combined_span(open_span, token.span) };
+					push_node(self.stack.as_mut_slice(), &mut self.children, Node::ProcessingInstruction(pi_node));
 					return;
 				}
 				lexer::TokenKind::Error => {
@@ -434,16 +338,17 @@ impl<'a> Parser<'a> {
 
 	fn parse_open_tag(&mut self, tag_span: SourceSpan) {
 		let tag = self.text_for_span(tag_span);
-		let open_span = Self::tag_open_span(tag_span);
+		let open_span = tag_open_span(tag_span);
 		let Some(tag_end) = self.parse_tag_attributes(true, ParseErrorKind::UnterminatedTag) else {
 			return;
 		};
 
 		let (attributes, id) = self.take_attributes();
+		let kind = ElementKind::from_tag(tag);
 		let element_span = match tag_end {
 			TagEnd::Close(close_span) | TagEnd::SelfClose(close_span) => combined_span(open_span, close_span),
 		};
-		let element = build_element(id, tag, tag_span, attributes, element_span);
+		let element = Element { id, tag, tag_span, kind, attributes, children: Vec::new(), span: element_span };
 
 		match tag_end {
 			TagEnd::Close(_) if matches!(element.kind, ElementKind::Void) => {
@@ -469,7 +374,7 @@ impl<'a> Parser<'a> {
 
 	fn parse_close_tag(&mut self, tag_span: SourceSpan) {
 		let tag = self.text_for_span(tag_span);
-		let open_span = Self::end_tag_open_span(tag_span);
+		let open_span = end_tag_open_span(tag_span);
 		let Some(tag_end) = self.parse_tag_attributes(false, ParseErrorKind::UnterminatedTag) else {
 			return;
 		};
@@ -508,6 +413,14 @@ impl<'a> Parser<'a> {
 	}
 }
 
-pub fn parse<'a>(input: &'a str) -> Document<'a> {
-	Parser::new(input).parse()
+fn tag_open_span(tag_span: SourceSpan) -> SourceSpan {
+	SourceSpan { start: tag_span.start.saturating_sub(1), end: tag_span.end }
+}
+
+fn end_tag_open_span(tag_span: SourceSpan) -> SourceSpan {
+	SourceSpan { start: tag_span.start.saturating_sub(2), end: tag_span.end }
+}
+
+fn markup_open_span(tag_span: SourceSpan) -> SourceSpan {
+	SourceSpan { start: tag_span.start.saturating_sub(2), end: tag_span.end }
 }
