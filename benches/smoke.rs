@@ -15,7 +15,7 @@ fn load_smoke_output(host: &str) -> String {
 	})
 }
 
-fn bench_host(bencher: &mut Bencher, host: &str) {
+fn bench_parse(bencher: &mut Bencher, host: &str) {
 	let html = load_smoke_output(host);
 	bencher.bytes = html.len() as u64;
 	bencher.iter(|| {
@@ -24,27 +24,61 @@ fn bench_host(bencher: &mut Bencher, host: &str) {
 }
 
 #[bench]
-fn spotify(bencher: &mut Bencher) {
-	bench_host(bencher, "spotify");
+fn parse_spotify(bencher: &mut Bencher) {
+	bench_parse(bencher, "spotify");
 }
 
 #[ignore = "Amazon smoke output is only available when the ignored smoke test has been run."]
 #[bench]
-fn amazon(bencher: &mut Bencher) {
-	bench_host(bencher, "amazon");
+fn parse_amazon(bencher: &mut Bencher) {
+	bench_parse(bencher, "amazon");
 }
 
 #[bench]
-fn wikipedia(bencher: &mut Bencher) {
-	bench_host(bencher, "wikipedia");
+fn parse_wikipedia(bencher: &mut Bencher) {
+	bench_parse(bencher, "wikipedia");
 }
 
 #[bench]
-fn nytimes(bencher: &mut Bencher) {
-	bench_host(bencher, "nytimes");
+fn parse_nytimes(bencher: &mut Bencher) {
+	bench_parse(bencher, "nytimes");
 }
 
 #[bench]
-fn example(bencher: &mut Bencher) {
-	bench_host(bencher, "example");
+fn parse_example(bencher: &mut Bencher) {
+	bench_parse(bencher, "example");
+}
+
+fn bench_lexer(bencher: &mut Bencher, host: &str) {
+	let html = load_smoke_output(host);
+	bencher.bytes = html.len() as u64;
+	bencher.iter(|| {
+		black_box(tagsoup::lexer::Lexer::new(black_box(html.as_str().as_bytes())).count());
+	});
+}
+
+#[bench]
+fn lexer_spotify(bencher: &mut Bencher) {
+	bench_lexer(bencher, "spotify");
+}
+
+#[ignore = "Amazon smoke output is only available when the ignored smoke test has been run."]
+#[bench]
+fn lexer_amazon(bencher: &mut Bencher) {
+	bench_lexer(bencher, "amazon");
+}
+
+#[bench]
+fn lexer_wikipedia(bencher: &mut Bencher) {
+	bench_lexer(bencher, "wikipedia");
+}
+
+#[bench]
+fn lexer_nytimes(bencher: &mut Bencher) {
+	bench_lexer(bencher, "nytimes");
+}
+
+#[bench]
+fn lexer_example(bencher: &mut Bencher) {
+	bench_lexer(bencher, "example");
 }

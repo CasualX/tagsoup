@@ -183,6 +183,7 @@ pub enum TokenKind {
 pub struct Token {
 	/// The kind of token.
 	pub kind: TokenKind,
+
 	/// The byte span of the token in the input.
 	///
 	/// See the [TokenKind] documentation for what the span contains for each token kind.
@@ -578,6 +579,10 @@ impl<'a> Iterator for Lexer<'a> {
 	}
 }
 
+#[cfg(feature = "memchr")]
+use memchr::memchr;
+
+#[cfg(not(feature = "memchr"))]
 fn memchr(byte: u8, haystack: &[u8]) -> Option<usize> {
 	for (i, &b) in haystack.iter().enumerate() {
 		if b == byte {

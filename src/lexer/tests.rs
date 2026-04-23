@@ -114,6 +114,25 @@ fn test_processing_instructions() {
 }
 
 #[test]
+fn test_process_instructions_args() {
+	assert_tokens("<?pi1?><?pi2 v?><?pi3 v=1?><?pi4 v='1'?>", &[
+		(TokenKind::PIOpen, "pi1"),
+		(TokenKind::PIClose, "?>"),
+		(TokenKind::PIOpen, "pi2"),
+		(TokenKind::AttrName, "v"),
+		(TokenKind::PIClose, "?>"),
+		(TokenKind::PIOpen, "pi3"),
+		(TokenKind::AttrName, "v"),
+		(TokenKind::AttrValue, "1?"),
+		(TokenKind::TagClose, ">"),
+		(TokenKind::PIOpen, "pi4"),
+		(TokenKind::AttrName, "v"),
+		(TokenKind::AttrValue, "'1'"),
+		(TokenKind::PIClose, "?>"),
+	]);
+}
+
+#[test]
 fn test_processing_instruction_errors() {
 	assert_tokens("<?pi \0?>", &[
 		(TokenKind::PIOpen, "pi"),
@@ -135,7 +154,7 @@ fn test_processing_instruction_errors() {
 }
 
 #[test]
-fn test_regular_tag_attributes_and_self_close() {
+fn test_smoke_tag_and_attributes() {
 	assert_tokens("<foo bar=\"baz\" @id='x'/>", &[
 		(TokenKind::TagOpen, "foo"),
 		(TokenKind::AttrName, "bar"),
@@ -155,7 +174,7 @@ fn test_regular_tag_attributes_and_self_close() {
 }
 
 #[test]
-fn test_tag_identifiers_with_allowed_special_chars() {
+fn test_tag_identifiers_allowed_special_chars() {
 	assert_tokens(r#"<x foo._baz:qux-123_@$="ok">"#, &[
 		(TokenKind::TagOpen, "x"),
 		(TokenKind::AttrName, "foo._baz:qux-123_@$"),
@@ -170,23 +189,28 @@ fn test_closing_tag_inputs() {
 		(TokenKind::EndTagOpen, "root"),
 		(TokenKind::TagClose, ">"),
 	]);
+	assert_tokens("</root>  ", &[
+		(TokenKind::EndTagOpen, "root"),
+		(TokenKind::TagClose, ">"),
+		(TokenKind::Text, "  "),
+	]);
 	assert_tokens("</  root>", &[
 		(TokenKind::Text, "</"),
 		(TokenKind::Text, "  root>"),
 	]);
+	assert_tokens("</  root>  ", &[
+		(TokenKind::Text, "</"),
+		(TokenKind::Text, "  root>  "),
+	]);
 }
 
 #[test]
-fn test_attr_unterminated() {
+fn test_attr_unterminated_errors() {
 	assert_tokens("<a x=\"unterminated", &[
 		(TokenKind::TagOpen, "a"),
 		(TokenKind::AttrName, "x"),
 		(TokenKind::AttrValue, "\"unterminated"),
 	]);
-}
-
-#[test]
-fn test_attr_errors() {
 	assert_tokens("<a \0>", &[
 		(TokenKind::TagOpen, "a"),
 		(TokenKind::Error, "\0"),
@@ -223,9 +247,26 @@ fn test_doctype_inputs() {
 }
 
 #[test]
+fn test_doctype_dtd() {
+	assert_tokens("<!DOCTYPE html [<!ELEMENT test ANY>]>", &[
+		(TokenKind::DocTypeOpen, "DOCTYPE"),
+		(TokenKind::DocTypeValue, "html"),
+		(TokenKind::DocTypeSubsetOpen, "["),
+		(TokenKind::DocTypeOpen, "ELEMENT"),
+		(TokenKind::DocTypeValue, "test"),
+		(TokenKind::DocTypeValue, "ANY"),
+		(TokenKind::DocTypeClose, ">"),
+		(TokenKind::DocTypeSubsetClose, "]"),
+		(TokenKind::DocTypeClose, ">"),
+	]);
+}
+
+#[test]
 fn test_comments() {
 	assert_tokens("<!--   hello world   -->", &[(TokenKind::Comment, "<!--   hello world   -->")]);
 	assert_tokens("<!---->", &[(TokenKind::Comment, "<!---->")]);
+	assert_tokens("<!--->", &[(TokenKind::Comment, "<!--->")]);
+	assert_tokens("<!-->", &[(TokenKind::Comment, "<!-->")]);
 	assert_tokens("<!--   -->", &[(TokenKind::Comment, "<!--   -->")]);
 	assert_tokens("<!--ab-cd-->", &[(TokenKind::Comment, "<!--ab-cd-->")]);
 	assert_tokens("<!-- abc", &[(TokenKind::Comment, "<!-- abc")]);
@@ -239,7 +280,7 @@ fn test_cdata() {
 }
 
 #[test]
-fn test_text_with_bare_less_than_is_fragmented() {
+fn test_text_with_bare_less_than() {
 	assert_tokens("1 < 2", &[
 		(TokenKind::Text, "1 "),
 		(TokenKind::Text, "<"),
@@ -254,11 +295,17 @@ fn test_text_with_bare_less_than_is_fragmented() {
 }
 
 #[test]
-fn test_unquoted_attr_value_absorbs_self_close_slash() {
+fn test_unquoted_attr_value() {
 	assert_tokens("<img src=x/>", &[
 		(TokenKind::TagOpen, "img"),
 		(TokenKind::AttrName, "src"),
 		(TokenKind::AttrValue, "x/"),
+		(TokenKind::TagClose, ">"),
+	]);
+	assert_tokens("<img src=x?>", &[
+		(TokenKind::TagOpen, "img"),
+		(TokenKind::AttrName, "src"),
+		(TokenKind::AttrValue, "x?"),
 		(TokenKind::TagClose, ">"),
 	]);
 	assert_tokens("<img src=http://example.test/logo.svg/>", &[
@@ -270,7 +317,7 @@ fn test_unquoted_attr_value_absorbs_self_close_slash() {
 }
 
 #[test]
-fn test_unicode_xml_names_are_not_lexed_as_tags() {
+fn test_unicode_xml_names() {
 	assert_tokens("<é attr=1>", &[
 		(TokenKind::TagOpen, "é"),
 		(TokenKind::AttrName, "attr"),
@@ -284,7 +331,7 @@ fn test_unicode_xml_names_are_not_lexed_as_tags() {
 }
 
 #[test]
-fn test_unterminated_constructs_do_not_emit_error_tokens() {
+fn test_unterminated_constructs() {
 	assert_tokens("<!-- unterminated", &[(TokenKind::Comment, "<!-- unterminated")]);
 	assert_tokens("<![CDATA[unterminated", &[(TokenKind::CData, "<![CDATA[unterminated")]);
 	assert_tokens("<a x='unterminated", &[
@@ -295,7 +342,8 @@ fn test_unterminated_constructs_do_not_emit_error_tokens() {
 }
 
 #[test]
-fn test_script_body_is_not_safe_without_raw_text_mode() {
+fn test_raw_text_without_helper() {
+	// You're expected to use the raw_text helper for <script> and <style> tags
 	assert_tokens("<script>if (a < b) x = 1;</script>", &[
 		(TokenKind::TagOpen, "script"),
 		(TokenKind::TagClose, ">"),
@@ -308,7 +356,7 @@ fn test_script_body_is_not_safe_without_raw_text_mode() {
 }
 
 #[test]
-fn test_raw_text_helper_stops_at_matching_close_tag_boundary() {
+fn test_raw_text_helper() {
 	let input = "if (a < b) x = 1;</ScRiPt >tail";
 	let mut lexer = Lexer::new(input.as_bytes());
 	let span = lexer.raw_text(b"script");
@@ -320,19 +368,4 @@ fn test_raw_text_helper_stops_at_matching_close_tag_boundary() {
 	let span = lexer.raw_text(b"script");
 	assert_eq!(&input[span.range()], "body</scriptx>tail");
 	assert_eq!(lexer.position, input.len());
-}
-
-#[test]
-fn test_doctype_value_with_nested_brackets() {
-	assert_tokens("<!DOCTYPE html [<!ELEMENT test ANY>]>", &[
-		(TokenKind::DocTypeOpen, "DOCTYPE"),
-		(TokenKind::DocTypeValue, "html"),
-		(TokenKind::DocTypeSubsetOpen, "["),
-		(TokenKind::DocTypeOpen, "ELEMENT"),
-		(TokenKind::DocTypeValue, "test"),
-		(TokenKind::DocTypeValue, "ANY"),
-		(TokenKind::DocTypeClose, ">"),
-		(TokenKind::DocTypeSubsetClose, "]"),
-		(TokenKind::DocTypeClose, ">"),
-	]);
 }
