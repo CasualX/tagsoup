@@ -6,7 +6,7 @@ macro_rules! known {
 			$($key,)*
 		}
 
-		impl std::str::FromStr for $name {
+		impl ::std::str::FromStr for $name {
 			type Err = ();
 
 			fn from_str(s: &str) -> Result<Self, Self::Err> {

@@ -4,33 +4,10 @@ use super::*;
 // local to one parent boundary instead of reconstructing that context later.
 #[derive(Copy, Clone)]
 struct Frame<'a, 'dom> {
+	node_index: usize,
+	element_index: usize,
 	element: &'dom Element<'a>,
 	siblings: &'dom [Node<'a>],
-}
-
-impl<'a, 'dom> Frame<'a, 'dom> {
-	fn with_element(self, element: &'dom Element<'a>) -> Self {
-		Self { element, siblings: self.siblings }
-	}
-}
-
-// Matching from the right lets us decide whether the current element is even a
-// candidate before we pay to inspect ancestors or siblings.
-fn split_last_compound<'step>(
-	steps: &'step [selector::Step<'step>],
-) -> Option<(
-	&'step [selector::Step<'step>],
-	Option<&'step selector::Combinator>,
-	&'step [selector::Step<'step>],
-)> {
-	match steps.iter().rposition(|step| matches!(step, selector::Step::Combinator(_))) {
-		Some(index) => {
-			let selector::Step::Combinator(combinator) = &steps[index] else { unreachable!() };
-			Some((&steps[..index], Some(combinator), &steps[index + 1..]))
-		}
-		None if !steps.is_empty() => Some((&[], None, steps)),
-		None => None,
-	}
 }
 
 pub fn query<'a, 'dom>(children: &'dom [Node<'a>], steps: &[selector::Step], result_fn: &mut dyn FnMut(&'dom Element<'a>) -> bool) {
@@ -43,11 +20,13 @@ fn query_in<'a, 'dom>(
 	steps: &[selector::Step],
 	result_fn: &mut dyn FnMut(&'dom Element<'a>) -> bool,
 ) -> bool {
-	for child in children {
+	let mut element_index = 0;
+	for (node_index, child) in children.iter().enumerate() {
 		let Node::Element(element) = child else { continue };
-		let frame = Frame { element, siblings: children };
+		let frame = Frame { node_index, element_index, element, siblings: children };
+		element_index += 1;
 
-		if check_element(frame, ancestors, steps) && !result_fn(element) {
+		if check_element(&frame, ancestors, steps) && !result_fn(element) {
 			return false;
 		}
 
@@ -67,39 +46,85 @@ fn query_in<'a, 'dom>(
 	true
 }
 
-fn selectors_match<'a, 'dom>(element: &'dom Element<'a>, selectors: &[selector::Step]) -> bool {
+// Matching from the right lets us decide whether the current element is even a
+// candidate before we pay to inspect ancestors or siblings.
+fn split_last_compound<'a, 'step>(steps: &'step [selector::Step<'a>]) -> Option<(
+	&'step [selector::Step<'a>],
+	Option<&'step selector::Combinator>,
+	&'step [selector::Step<'a>],
+)> {
+	match steps.iter().rposition(|step| matches!(step, selector::Step::Combinator(_))) {
+		Some(index) => {
+			let selector::Step::Combinator(combinator) = &steps[index] else { unreachable!() };
+			Some((&steps[..index], Some(combinator), &steps[index + 1..]))
+		}
+		None if !steps.is_empty() => Some((&[], None, steps)),
+		None => None,
+	}
+}
+
+fn is_last_child(frame: &Frame) -> bool {
+	let Some(tail) = frame.siblings.get(frame.node_index + 1..) else { return true };
+	tail.iter().all(|node| node.element().is_none())
+}
+
+fn is_only_child(frame: &Frame) -> bool {
+	frame.element_index == 0 && is_last_child(frame)
+}
+
+fn nth_expr_matches(frame: &Frame, expr: &selector::NthExpr) -> bool {
+	let child_index = frame.element_index as i32 + 1;
+	expr.eval(child_index)
+}
+
+fn nth_last_expr_matches(frame: &Frame, expr: &selector::NthExpr) -> bool {
+	// TODO: Inefficient to count all siblings for every element
+	let total_children = frame.siblings.iter().filter(|node| node.element().is_some()).count() as i32;
+	let child_index = total_children - frame.element_index as i32;
+	expr.eval(child_index)
+}
+
+fn filter_matches<'a, 'dom>(frame: &Frame<'a, 'dom>, filter: &selector::Filter) -> bool {
+	use selector::Filter::{self, *};
+	let element = frame.element;
+	match filter {
+		&Universal => true,
+		&Tag(tag) => Filter::tag_equals(element.tag, tag),
+		&Class(value) => Filter::attr_word(element.get_attribute_value("class").as_deref(), value),
+		&Id(id) => element.id == Some(id),
+		&AttrExists(name) => element.get_attribute(name).is_some(),
+		&AttrEquals { name, value } => Filter::attr_equals(element.get_attribute_value(name).as_deref(), value),
+		&AttrWord { name, value } => Filter::attr_word(element.get_attribute_value(name).as_deref(), value),
+		&AttrHyphen { name, value } => Filter::attr_hyphen(element.get_attribute_value(name).as_deref(), value),
+		&AttrStartsWith { name, value } => Filter::attr_starts_with(element.get_attribute_value(name).as_deref(), value),
+		&AttrEndsWith { name, value } => Filter::attr_ends_with(element.get_attribute_value(name).as_deref(), value),
+		&AttrContains { name, value } => Filter::attr_contains(element.get_attribute_value(name).as_deref(), value),
+		&Empty => element.is_empty(),
+		&FirstChild => frame.element_index == 0,
+		&LastChild => is_last_child(frame),
+		&OnlyChild => is_only_child(frame),
+		&NthChild(ref expr) => nth_expr_matches(frame, expr),
+		&NthLastChild(ref expr) => nth_last_expr_matches(frame, expr),
+	}
+}
+
+fn selectors_match<'a, 'dom>(frame: &Frame<'a, 'dom>, selectors: &[selector::Step]) -> bool {
 	use selector::Step::*;
-	use selector::Filter::*;
 	selectors.iter().all(|step| match step {
+		#[cfg(debug_assertions)]
 		Combinator(_) => unreachable!(),
-		&Filter(Tag(filter_tag)) => element.tag.eq_ignore_ascii_case(filter_tag),
-		&Filter(Class(filter_class)) => element.get_attribute_value("class").map_or(false, |class_list| class_list.split_ascii_whitespace().any(|class| class == filter_class)),
-		&Filter(Id(filter_id)) => element.id == Some(filter_id),
-		&Filter(AttrExists(filter_name)) => element.get_attribute(filter_name).is_some(),
-		&Filter(AttrEquals { name, value }) => element.get_attribute_value(name).map_or(false, |v| v == value),
-		&Filter(AttrContains { name, value }) => element.get_attribute_value(name).map_or(false, |v| v.contains(value)),
-		&Filter(AttrStartsWith { name, value }) => element.get_attribute_value(name).map_or(false, |v| v.starts_with(value)),
-		&Filter(AttrEndsWith { name, value }) => element.get_attribute_value(name).map_or(false, |v| v.ends_with(value)),
-		&Filter(AttrWhitespaceContains { name, value }) => element.get_attribute_value(name).map_or(false, |v| v.split_ascii_whitespace().any(|part| part == value)),
+		#[cfg(not(debug_assertions))]
+		Combinator(_) => true,
+		Filter(filter) => filter_matches(frame, filter),
 	})
 }
 
-fn previous_element_siblings<'a, 'dom>(frame: Frame<'a, 'dom>) -> impl Iterator<Item = &'dom Element<'a>> + 'dom {
-	let index = frame.siblings.iter()
-		// Pointer identity is enough here because traversal hands us references from
-		// the exact sibling slice we are searching within.
-		.position(|node| matches!(node, Node::Element(candidate) if std::ptr::eq(candidate, frame.element)))
-		.expect("current element must be present in its sibling slice");
-
-	frame.siblings[..index].iter().rev().filter_map(|node| node.element())
-}
-
-fn check_element<'a, 'dom>(frame: Frame<'a, 'dom>, ancestors: &[Frame<'a, 'dom>], steps: &[selector::Step]) -> bool {
+fn check_element<'a, 'dom>(frame: &Frame<'a, 'dom>, ancestors: &[Frame<'a, 'dom>], steps: &[selector::Step]) -> bool {
 	let Some((rest, combinator, selectors)) = split_last_compound(steps) else {
 		return false;
 	};
 
-	if !selectors_match(frame.element, selectors) {
+	if !selectors_match(frame, selectors) {
 		return false;
 	}
 
@@ -113,19 +138,44 @@ fn check_element<'a, 'dom>(frame: Frame<'a, 'dom>, ancestors: &[Frame<'a, 'dom>]
 }
 
 fn descendant<'a, 'dom>(ancestors: &[Frame<'a, 'dom>], rest: &[selector::Step<'_>]) -> bool {
-	ancestors.iter().enumerate().rev().any(|(index, &parent)| check_element(parent, &ancestors[..index], rest))
+	ancestors.iter().enumerate().rev().any(|(index, &parent)|
+		check_element(&parent, &ancestors[..index], rest))
 }
 
 fn child<'a, 'dom>(ancestors: &[Frame<'a, 'dom>], rest: &[selector::Step<'_>]) -> bool {
-	ancestors.split_last().is_some_and(|(&parent, rest_ancestors)| check_element(parent, rest_ancestors, rest))
+	ancestors.split_last().is_some_and(|(&parent, rest_ancestors)|
+		check_element(&parent, rest_ancestors, rest))
 }
 
-fn next_sibling<'a, 'dom>(frame: Frame<'a, 'dom>, ancestors: &[Frame<'a, 'dom>], rest: &[selector::Step<'_>]) -> bool {
-	// Adjacent-sibling matching stays under the same parent, so only the current
-	// element changes while the ancestor stack and sibling slice stay fixed.
-	previous_element_siblings(frame).next().is_some_and(|sibling| check_element(frame.with_element(sibling), ancestors, rest))
+fn next_sibling<'a, 'dom>(frame: &Frame<'a, 'dom>, ancestors: &[Frame<'a, 'dom>], rest: &[selector::Step<'_>]) -> bool {
+	previous_elements(frame).next().is_some_and(|sibling|
+		check_element(&sibling, ancestors, rest))
 }
 
-fn subsequent_sibling<'a, 'dom>(frame: Frame<'a, 'dom>, ancestors: &[Frame<'a, 'dom>], rest: &[selector::Step<'_>]) -> bool {
-	previous_element_siblings(frame).any(|sibling| check_element(frame.with_element(sibling), ancestors, rest))
+fn subsequent_sibling<'a, 'dom>(frame: &Frame<'a, 'dom>, ancestors: &[Frame<'a, 'dom>], rest: &[selector::Step<'_>]) -> bool {
+	previous_elements(frame).any(|sibling|
+		check_element(&sibling, ancestors, rest))
+}
+
+/// Iterates over the previous sibling elements of the given frame, starting with the immediately preceding sibling.
+fn previous_elements<'a, 'dom>(frame: &Frame<'a, 'dom>) -> impl Iterator<Item = Frame<'a, 'dom>> {
+	let mut node_index = frame.node_index;
+	let mut element_index = frame.element_index;
+
+	iter::from_fn(move || {
+		// Should never be out of bounds if the frame is valid
+		#[cfg(not(debug_assertions))]
+		if node_index >= frame.siblings.len() {
+			return None;
+		}
+
+		while node_index > 0 {
+			node_index -= 1;
+			let Some(element) = frame.siblings[node_index].element() else { continue };
+			element_index -= 1;
+			return Some(Frame { node_index, element_index, element, siblings: frame.siblings });
+		}
+
+		None
+	})
 }

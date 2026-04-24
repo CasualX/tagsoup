@@ -61,7 +61,7 @@ This is not a full WHATWG-compliant HTML parser. It is a pragmatic parser for do
 
 use std::collections::HashMap;
 use std::borrow::Cow;
-use std::{fmt, mem};
+use std::{error, fmt, iter, mem, str};
 
 #[macro_use]
 mod known;
@@ -94,10 +94,10 @@ pub use dom_ref::*;
 #[cfg(debug_assertions)]
 #[inline]
 fn unsafe_as_str(bytes: &[u8]) -> &str {
-	std::str::from_utf8(bytes).unwrap()
+	str::from_utf8(bytes).unwrap()
 }
 #[cfg(not(debug_assertions))]
 #[inline]
 fn unsafe_as_str(bytes: &[u8]) -> &str {
-	unsafe { std::str::from_utf8_unchecked(bytes) }
+	unsafe { str::from_utf8_unchecked(bytes) }
 }

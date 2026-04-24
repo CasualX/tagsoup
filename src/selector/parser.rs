@@ -30,7 +30,7 @@ impl fmt::Display for ParseSelectorError {
 	}
 }
 
-impl std::error::Error for ParseSelectorError {
+impl error::Error for ParseSelectorError {
 	fn description(&self) -> &str {
 		self.kind.as_str()
 	}
@@ -40,6 +40,7 @@ enum LexerState {
 	Selector,
 	AttrName,
 	AttrValue,
+	NthExpr,
 }
 
 pub struct Parser<'a> {
@@ -96,6 +97,11 @@ impl<'a> Parser<'a> {
 
 		loop {
 			match self.peek() {
+				Some(b'*') if !parsed => {
+					self.bump();
+					self.steps.push(Step::Filter(Filter::Universal));
+					parsed = true;
+				}
 				Some(b'#') => {
 					self.bump();
 					let value = self.next_ident(ParseSelectorErrorKind::InvalidSelector)?;
@@ -110,6 +116,10 @@ impl<'a> Parser<'a> {
 				}
 				Some(b'[') => {
 					self.parse_attribute_selector()?;
+					parsed = true;
+				}
+				Some(b':') => {
+					self.parse_pseudo_class()?;
 					parsed = true;
 				}
 				Some(b'>') | None => break,
@@ -131,6 +141,88 @@ impl<'a> Parser<'a> {
 		else {
 			Err(self.error_at(self.position, self.position, ParseSelectorErrorKind::InvalidSelector))
 		}
+	}
+
+	fn parse_pseudo_class(&mut self) -> Result<(), ParseSelectorError> {
+		self.expect(b':')?;
+		let name = self.next_pseudo_ident()?;
+
+		match name {
+			"empty" => self.steps.push(Step::Filter(Filter::Empty)),
+			"first-child" => self.steps.push(Step::Filter(Filter::FirstChild)),
+			"last-child" => self.steps.push(Step::Filter(Filter::LastChild)),
+			"only-child" => self.steps.push(Step::Filter(Filter::OnlyChild)),
+			"nth-child" => {
+				self.skip_whitespace();
+				self.expect(b'(')?;
+				self.skip_whitespace();
+				self.state = LexerState::NthExpr;
+				let expr = self.parse_nth_expr()?;
+				self.skip_whitespace();
+				self.expect(b')')?;
+				self.state = LexerState::Selector;
+				self.steps.push(Step::Filter(Filter::NthChild(expr)));
+			}
+			"nth-last-child" => {
+				self.skip_whitespace();
+				self.expect(b'(')?;
+				self.skip_whitespace();
+				self.state = LexerState::NthExpr;
+				let expr = self.parse_nth_expr()?;
+				self.skip_whitespace();
+				self.expect(b')')?;
+				self.state = LexerState::Selector;
+				self.steps.push(Step::Filter(Filter::NthLastChild(expr)));
+			}
+			_ => return Err(self.error_at(self.position, self.position, ParseSelectorErrorKind::InvalidSelector)),
+		}
+
+		Ok(())
+	}
+
+	fn next_pseudo_ident(&mut self) -> Result<&'a str, ParseSelectorError> {
+		self.slurp(|ch| ch.is_ascii_alphanumeric() || matches!(ch, b'_' | b'-'))
+			.ok_or_else(|| self.error_at(self.position, self.position, ParseSelectorErrorKind::InvalidSelector))
+	}
+
+	fn parse_nth_expr(&mut self) -> Result<NthExpr, ParseSelectorError> {
+		let start = self.position;
+		while let Some(ch) = self.peek() {
+			if ch == b')' {
+				break;
+			}
+			self.bump();
+		}
+
+		let raw = unsafe_as_str(&self.input[start..self.position]);
+		let expr: String = raw.bytes().filter(|ch| !ch.is_ascii_whitespace()).map(char::from).collect();
+		if expr.is_empty() {
+			return Err(self.error_at(start, self.position, ParseSelectorErrorKind::InvalidSelector));
+		}
+
+		if expr.eq_ignore_ascii_case("even") {
+			return Ok(NthExpr::Even);
+		}
+		if expr.eq_ignore_ascii_case("odd") {
+			return Ok(NthExpr::Odd);
+		}
+
+		let Some(n_pos) = expr.bytes().position(|ch| ch.eq_ignore_ascii_case(&b'n')) else {
+			let b = expr.parse().map_err(|_| self.error_at(start, self.position, ParseSelectorErrorKind::InvalidSelector))?;
+			return Ok(NthExpr::Formula { a: 0, b });
+		};
+
+		let a = match &expr[..n_pos] {
+			"" | "+" => 1,
+			"-" => -1,
+			value => value.parse().map_err(|_| self.error_at(start, self.position, ParseSelectorErrorKind::InvalidSelector))?,
+		};
+		let b = match &expr[n_pos + 1..] {
+			"" => 0,
+			value => value.parse().map_err(|_| self.error_at(start, self.position, ParseSelectorErrorKind::InvalidSelector))?,
+		};
+
+		Ok(NthExpr::Formula { a, b })
 	}
 
 	fn parse_attribute_selector(&mut self) -> Result<(), ParseSelectorError> {
@@ -173,7 +265,17 @@ impl<'a> Parser<'a> {
 				let value = self.parse_attr_value()?;
 				self.skip_whitespace();
 				self.expect(b']')?;
-				self.steps.push(Step::Filter(Filter::AttrWhitespaceContains { name, value }));
+				self.steps.push(Step::Filter(Filter::AttrWord { name, value }));
+			}
+			Some(b'|') => {
+				self.bump();
+				self.expect(b'=')?;
+				self.skip_whitespace();
+				self.state = LexerState::AttrValue;
+				let value = self.parse_attr_value()?;
+				self.skip_whitespace();
+				self.expect(b']')?;
+				self.steps.push(Step::Filter(Filter::AttrHyphen { name, value }));
 			}
 			Some(b'*') => {
 				self.bump();
@@ -248,6 +350,11 @@ impl<'a> Parser<'a> {
 
 	#[inline]
 	fn next_ident(&mut self, kind: ParseSelectorErrorKind) -> Result<&'a str, ParseSelectorError> {
+		let is_ident_char = match self.state {
+			LexerState::AttrName => is_attr_ident_char as fn(u8) -> bool,
+			LexerState::Selector | LexerState::AttrValue | LexerState::NthExpr => is_selector_ident_char as fn(u8) -> bool,
+		};
+
 		self.slurp(is_ident_char).ok_or_else(|| self.error_at(self.position, self.position, kind))
 	}
 
@@ -296,6 +403,10 @@ impl<'a> Parser<'a> {
 	}
 }
 
-fn is_ident_char(ch: u8) -> bool {
-	ch.is_ascii_alphanumeric() || matches!(ch, b'_' | b'-' | b':' | b'@')
+fn is_selector_ident_char(ch: u8) -> bool {
+	ch.is_ascii_alphanumeric() || matches!(ch, b'_' | b'-')
+}
+
+fn is_attr_ident_char(ch: u8) -> bool {
+	is_selector_ident_char(ch) || matches!(ch, b':' | b'@')
 }

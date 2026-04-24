@@ -85,6 +85,104 @@ fn matches_attribute_contains_filters() {
 }
 
 #[test]
+fn matches_attribute_hyphen_filters() {
+	let doc = Document::parse(r#"
+		<div>
+			<section lang="en" id="a"></section>
+			<section lang="en-US" id="b"></section>
+			<section lang="english" id="c"></section>
+			<section lang="fr" id="d"></section>
+		</div>
+	"#);
+
+	let result = doc.query_selector_all("section[lang|=en]");
+	assert_eq!(result.len(), 2);
+	assert_eq!(result[0].id, Some("a"));
+	assert_eq!(result[1].id, Some("b"));
+}
+
+#[test]
+fn matches_universal_empty_and_first_child_filters() {
+	let doc = Document::parse(r#"
+		<div>
+			<section id="a"></section>
+			<section id="b"> text </section>
+			<section id="c"><span></span></section>
+		</div>
+	"#);
+
+	assert_eq!(doc.query_selector("*").unwrap().tag, "div");
+	assert_eq!(doc.query_selector("section:first-child").unwrap().id, Some("a"));
+
+	let result = doc.query_selector_all("section:empty");
+	assert_eq!(result.len(), 1);
+	assert_eq!(result[0].id, Some("a"));
+}
+
+#[test]
+fn matches_last_child_and_only_child_filters() {
+	let doc = Document::parse(r#"
+		<div>
+			<div>
+				<section id="a"></section>
+				<section id="b"></section>
+				<section id="c"></section>
+			</div>
+			<article>
+				<p id="only"></p>
+			</article>
+		</div>
+	"#);
+
+	assert_eq!(doc.query_selector("section:last-child").unwrap().id, Some("c"));
+	assert_eq!(doc.query_selector("p:only-child").unwrap().id, Some("only"));
+	assert_eq!(doc.query_selector_all("section:only-child").len(), 0);
+}
+
+#[test]
+fn matches_nth_child_filters() {
+	let doc = Document::parse(r#"
+		<ul>
+			<li id="a"></li>
+			<li id="b"></li>
+			<li id="c"></li>
+			<li id="d"></li>
+			<li id="e"></li>
+		</ul>
+	"#);
+
+	let even = doc.query_selector_all("li:nth-child(even)");
+	assert_eq!(even.len(), 2);
+	assert_eq!(even[0].id, Some("b"));
+	assert_eq!(even[1].id, Some("d"));
+
+	let odd = doc.query_selector_all("li:nth-child(odd)");
+	assert_eq!(odd.len(), 3);
+	assert_eq!(odd[0].id, Some("a"));
+	assert_eq!(odd[1].id, Some("c"));
+	assert_eq!(odd[2].id, Some("e"));
+
+	let formula = doc.query_selector_all("li:nth-child(2n+1)");
+	assert_eq!(formula.len(), 3);
+	assert_eq!(formula[0].id, Some("a"));
+	assert_eq!(formula[1].id, Some("c"));
+	assert_eq!(formula[2].id, Some("e"));
+
+	assert_eq!(doc.query_selector("li:nth-child(3)").unwrap().id, Some("c"));
+	assert_eq!(doc.query_selector("li:nth-child(-n+3)").unwrap().id, Some("a"));
+	assert_eq!(doc.query_selector_all("li:nth-child(-n+3)").len(), 3);
+
+	let nth_last = doc.query_selector_all("li:nth-last-child(2n+1)");
+	assert_eq!(nth_last.len(), 3);
+	assert_eq!(nth_last[0].id, Some("a"));
+	assert_eq!(nth_last[1].id, Some("c"));
+	assert_eq!(nth_last[2].id, Some("e"));
+
+	assert_eq!(doc.query_selector("li:nth-last-child(2)").unwrap().id, Some("d"));
+	assert_eq!(doc.query_selector_all("li:nth-last-child(-n+3)").len(), 3);
+}
+
+#[test]
 fn query_selector_does_not_descend_into_template_contents() {
 	let doc = Document::parse(r#"
 		<div>

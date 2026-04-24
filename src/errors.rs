@@ -50,7 +50,7 @@ pub struct ParseError {
 	pub kind: ParseErrorKind,
 }
 
-impl std::error::Error for ParseError {
+impl error::Error for ParseError {
 	fn description(&self) -> &str {
 		self.kind.as_str()
 	}

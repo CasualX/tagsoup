@@ -1,3 +1,4 @@
+use std::ops;
 
 /// Span of the information in the parsed source.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
@@ -23,7 +24,7 @@ impl SourceSpan {
 
 	/// Gets the byte range of the span.
 	#[inline]
-	pub fn range(&self) -> std::ops::Range<usize> {
+	pub fn range(&self) -> ops::Range<usize> {
 		self.start as usize..self.end as usize
 	}
 

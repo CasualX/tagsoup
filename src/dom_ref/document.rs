@@ -89,6 +89,17 @@ impl<'a> Document<'a> {
 }
 
 impl<'a> Document<'a> {
+	/// Checks if the document is empty.
+	///
+	/// The document is considered empty if its children are whitespace-only text nodes and do not contain element nodes.
+	pub fn is_empty(&self) -> bool {
+		self.children.iter().all(|child| match child {
+			Node::Text(t) => t.text.trim_ascii().is_empty(),
+			Node::Element(_) => false,
+			_ => true,
+		})
+	}
+
 	/// Visits all elements in the DOM tree depth-first.
 	///
 	/// The visitor function is called for each element in the tree.

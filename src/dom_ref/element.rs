@@ -42,6 +42,17 @@ impl<'a> Element<'a> {
 		self.get_attribute(key)?.value.as_ref().map(|value| value.value())
 	}
 
+	/// Checks if the element is empty.
+	///
+	/// An element is considered empty if its children are whitespace-only text nodes and do not contain element nodes.
+	pub fn is_empty(&self) -> bool {
+		self.children.iter().all(|child| match child {
+			Node::Text(t) => t.text.trim_ascii().is_empty(),
+			Node::Element(_) => false,
+			_ => true,
+		})
+	}
+
 	/// Gets the text content of the element and all of its children.
 	///
 	/// This decodes HTML entities (except `script` and `style` elements) but does not normalize whitespace.
