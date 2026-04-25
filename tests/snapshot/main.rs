@@ -4,9 +4,11 @@
 
 use std::{any, fs, path};
 
+mod diff;
+
 fn assert_snapshot(fn_name: &str, mut value: String) {
 	let file_name = fn_name.replace(":", "_");
-	let snapshot_path = path::PathBuf::from(format!("tests/html_parser/snapshots/{file_name}.snap"));
+	let snapshot_path = path::Path::new(file!()).parent().unwrap().join(format!("snapshots/{file_name}.snap"));
 
 	value.push_str("\n");
 
@@ -27,7 +29,8 @@ fn assert_snapshot(fn_name: &str, mut value: String) {
 	let expected = &expected[b..];
 
 	if !expected.lines().eq(value.lines()) {
-		panic!("Snapshot mismatch for {fn_name}.\nRun with UPDATE_SNAPSHOTS=1 to update the snapshot and inspect the diff.");
+		let diff = diff::render_line_diff(&snapshot_path, expected, &value);
+		panic!("Snapshot mismatch for {fn_name}.\n\n{diff}\nRun with UPDATE_SNAPSHOTS=1 to update the snapshot.");
 	}
 }
 
