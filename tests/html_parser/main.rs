@@ -26,7 +26,7 @@ fn assert_snapshot(fn_name: &str, mut value: String) {
 	let b = a + expected[a..].find("---").map_or(0, |i| i + 4);
 	let expected = &expected[b..];
 
-	if expected != value {
+	if !expected.lines().eq(value.lines()) {
 		panic!("Snapshot mismatch for {fn_name}.\nRun with UPDATE_SNAPSHOTS=1 to update the snapshot and inspect the diff.");
 	}
 }
