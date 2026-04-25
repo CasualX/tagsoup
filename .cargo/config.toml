@@ -1,0 +1,3 @@
+[alias]
+coverage = "llvm-cov --workspace --all-features --summary-only"
+coverage-html = "llvm-cov --workspace --all-features --html --output-dir target/llvm-cov/html"

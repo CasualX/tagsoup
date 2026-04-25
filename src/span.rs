@@ -102,3 +102,19 @@ fn line_col(offset: usize, source: &str) -> (u32, u32) {
 
 	(line, column)
 }
+
+#[test]
+fn test_resolved_span() {
+	let source = "line 1\nline 2\nline 3";
+	let span = SourceSpan::new(7, 18); // "line 2"
+	let resolved = span.resolve(source).unwrap();
+	assert_eq!(resolved.text, "line 2\nline");
+	assert_eq!(resolved.start_line, 2);
+	assert_eq!(resolved.start_column, 0);
+	assert_eq!(resolved.end_line, 3);
+	assert_eq!(resolved.end_column, 4);
+	let snippet = resolved.snippet(4);
+	assert_eq!(snippet, "line");
+	let snippet2 = resolved.snippet(20);
+	assert_eq!(snippet2, "line 2");
+}

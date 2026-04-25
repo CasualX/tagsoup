@@ -156,3 +156,22 @@ fn rejects_leading_child_combinator() {
 
 	assert_eq!(error.kind, parser::ParseSelectorErrorKind::InvalidSelector);
 }
+
+#[test]
+fn reports_specific_parser_error_kinds_and_messages() {
+	let empty = parser::Parser::parse("").unwrap_err();
+	assert_eq!(empty.kind, parser::ParseSelectorErrorKind::InvalidSelector);
+	assert_eq!(empty.to_string(), "0:0 invalid selector");
+
+	let unknown_pseudo = parser::Parser::parse("div:future").unwrap_err();
+	assert_eq!(unknown_pseudo.kind, parser::ParseSelectorErrorKind::InvalidSelector);
+	assert_eq!(unknown_pseudo.kind.as_str(), "invalid selector");
+
+	let invalid_attr_name = parser::Parser::parse("div[=value]").unwrap_err();
+	assert_eq!(invalid_attr_name.kind, parser::ParseSelectorErrorKind::InvalidAttributeName);
+	assert_eq!(invalid_attr_name.kind.as_str(), "invalid attribute name");
+
+	let invalid_attr_value = parser::Parser::parse("div[href='unterminated]").unwrap_err();
+	assert_eq!(invalid_attr_value.kind, parser::ParseSelectorErrorKind::InvalidAttributeValue);
+	assert!(invalid_attr_value.to_string().ends_with("invalid attribute value"));
+}

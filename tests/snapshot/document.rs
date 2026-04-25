@@ -11,6 +11,7 @@ fn it_can_parse_minimal_document() {
 fn it_can_parse_document_with_comments() {
 	let html =
 		r#"
+		<?xml version="1.0"?>
 		<!-- comment -->
 		<!-- comment -->
 		<!DOCTYPE html>

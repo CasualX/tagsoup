@@ -279,3 +279,110 @@ fn element_text_decoding_varies_by_element_kind() {
 	assert_eq!(title.tag, "title");
 	assert_eq!(title.text_content(), "A & B");
 }
+
+#[test]
+fn trimmed_trims_comments_and_drops_empty_text_nodes() {
+	let doc = Document::parse(" \n <!-- spaced --> \n <div> ok </div> \n ").trimmed();
+	assert_eq!(doc.errors, []);
+	assert_eq!(doc.children.len(), 2);
+
+	let comment = doc.children[0].comment().unwrap();
+	assert_eq!(comment.comment, "spaced");
+
+	let div = doc.children[1].element().unwrap();
+	assert_eq!(div.tag, "div");
+	assert_eq!(div.children.len(), 1);
+	assert_eq!(div.children[0].text().map(|text| text.text), Some("ok"));
+}
+
+#[test]
+fn document_visit_and_parents_track_dom_ancestry() {
+	let doc = Document::parse(r#"
+		<div id="root">
+			<section id="skip">
+				<span id="skipped"></span>
+			</section>
+			<article id="stop">
+				<span id="after-stop"></span>
+			</article>
+			<footer id="never"></footer>
+		</div>
+	"#).trimmed();
+
+	let mut visited = Vec::new();
+	doc.visit(|parents, element| {
+		visited.push((parents.iter().filter_map(|parent| parent.id).collect(), element.id.unwrap()));
+		match element.id {
+			Some("skip") => VisitControl::Continue,
+			Some("stop") => VisitControl::Stop,
+			_ => VisitControl::Descend,
+		}
+	});
+
+	assert_eq!(visited, vec![
+		(vec![], "root"),
+		(vec!["root"], "skip"),
+		(vec!["root"], "stop"),
+	]);
+
+	let parents = doc.parents();
+	let root = doc.children[0].element().unwrap();
+	let skip_node = &root.children[0];
+	let skipped_node = &root.children[0].element().unwrap().children[0];
+	let stop_node = &root.children[1];
+	let after_stop_node = &root.children[1].element().unwrap().children[0];
+
+	assert_eq!(parents.get(&(skip_node as *const Node)).unwrap().id, Some("root"));
+	assert_eq!(parents.get(&(skipped_node as *const Node)).unwrap().id, Some("skip"));
+	assert_eq!(parents.get(&(stop_node as *const Node)).unwrap().id, Some("root"));
+	assert_eq!(parents.get(&(after_stop_node as *const Node)).unwrap().id, Some("stop"));
+}
+
+#[test]
+fn element_helpers_scope_queries_and_decode_values() {
+	let doc = Document::parse(r#"
+		<div id="root">
+			<section id="scope">
+				<a id="link" href="a&amp;b">one &amp; two<strong id="nested">!</strong></a>
+				<script id="raw">&amp;</script>
+				<p id="blank">  </p>
+				<span class="target" id="inner"></span>
+			</section>
+			<span class="target" id="outside"></span>
+		</div>
+	"#).trimmed();
+
+	let root = doc.children[0].element().unwrap();
+	let section = root.query_selector("#scope").unwrap();
+	let link = section.query_selector("a").unwrap();
+	let raw = section.query_selector("#raw").unwrap();
+	let blank = section.query_selector("#blank").unwrap();
+
+	assert_eq!(link.get_attribute("href").map(|attribute| attribute.key), Some("href"));
+	assert_eq!(link.get_attribute_value("href").as_deref(), Some("a&b"));
+	assert_eq!(link.get_attribute_value("missing").as_deref(), None);
+	assert_eq!(link.text_content(), "one & two!");
+	assert_eq!(raw.text_content(), "&amp;");
+	assert_eq!(blank.text_content(), "");
+	assert_eq!(section.query_selector("#outside"), None);
+
+	let matches = section.query_selector_all("span.target");
+	assert_eq!(matches.len(), 1);
+	assert_eq!(matches[0].id, Some("inner"));
+
+	let mut visited = Vec::new();
+	section.visit(|parents, element| {
+		visited.push((parents.iter().filter_map(|parent| parent.id).collect::<Vec<_>>(), element.id));
+		match element.id {
+			Some("link") => VisitControl::Continue,
+			_ => VisitControl::Descend,
+		}
+	});
+
+	assert_eq!(visited, vec![
+		(vec![], Some("link")),
+		(vec![], Some("raw")),
+		(vec![], Some("blank")),
+		(vec![], Some("inner")),
+	]);
+}

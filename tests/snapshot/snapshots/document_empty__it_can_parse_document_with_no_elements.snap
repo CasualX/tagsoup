@@ -1,0 +1,34 @@
+{
+  "children": [
+    {
+      "text": "\n\t\t"
+    },
+    {
+      "target": "xml",
+      "data": [
+        {
+          "key": "version",
+          "value": "1.0"
+        }
+      ]
+    },
+    {
+      "text": "\n\t\t"
+    },
+    {
+      "keyword": "DOCTYPE",
+      "args": [
+        "html"
+      ]
+    },
+    {
+      "text": "\n\t\t"
+    },
+    {
+      "comment": " comment "
+    },
+    {
+      "text": "\n\t"
+    }
+  ]
+}

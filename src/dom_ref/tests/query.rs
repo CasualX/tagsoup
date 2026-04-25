@@ -234,3 +234,27 @@ fn matches_subsequent_siblings_only_with_same_parent() {
 	assert_eq!(result[0].id, Some("first"));
 	assert_eq!(result[1].id, Some("second"));
 }
+
+#[test]
+fn matches_descendants_with_attribute_presence_prefix_suffix_and_word_filters() {
+	let doc = Document::parse(r#"
+		<div id="root">
+			<article id="outer">
+				<section>
+					<a id="match" href="https://example.com/card" rel="nofollow noopener" data-kind="hero-card"></a>
+				</section>
+			</article>
+			<article>
+				<a id="missing-href" rel="nofollow noopener" data-kind="hero-card"></a>
+				<a id="wrong-prefix" href="ftp://example.com/card" rel="nofollow noopener" data-kind="hero-card"></a>
+				<a id="wrong-suffix" href="https://example.com/feed" rel="nofollow noopener" data-kind="hero-card"></a>
+				<a id="wrong-word" href="https://example.com/card" rel="follow" data-kind="hero-card"></a>
+				<a id="wrong-kind" href="https://example.com/card" rel="nofollow noopener" data-kind="card-hero"></a>
+			</article>
+		</div>
+	"#);
+
+	let result = doc.query_selector_all("div article a[href][href^=https][rel~=nofollow][data-kind^=hero][href$=card]");
+	assert_eq!(result.len(), 1);
+	assert_eq!(result[0].id, Some("match"));
+}
