@@ -11,13 +11,18 @@ struct Frame<'a, 'dom> {
 }
 
 pub fn query<'a, 'dom>(children: &'dom [Node<'a>], steps: &[selector::Step], result_fn: &mut dyn FnMut(&'dom Element<'a>) -> bool) {
-	query_in(children, &mut Vec::new(), steps, result_fn);
+	// Query each selector list independently, this may cause duplicates but keeps the implementation simple...
+	for steps in steps.split(|step| matches!(step, selector::Step::SelectorList)) {
+		if !query_in(children, &mut Vec::new(), steps, result_fn) {
+			return;
+		}
+	}
 }
 
 fn query_in<'a, 'dom>(
 	children: &'dom [Node<'a>],
 	ancestors: &mut Vec<Frame<'a, 'dom>>,
-	steps: &[selector::Step],
+	steps: &[selector::Step<'_>],
 	result_fn: &mut dyn FnMut(&'dom Element<'a>) -> bool,
 ) -> bool {
 	let mut element_index = 0;
@@ -111,6 +116,10 @@ fn filter_matches<'a, 'dom>(frame: &Frame<'a, 'dom>, filter: &selector::Filter) 
 fn selectors_match<'a, 'dom>(frame: &Frame<'a, 'dom>, selectors: &[selector::Step]) -> bool {
 	use selector::Step::*;
 	selectors.iter().all(|step| match step {
+		#[cfg(debug_assertions)]
+		SelectorList => unreachable!(),
+		#[cfg(not(debug_assertions))]
+		SelectorList => true,
 		#[cfg(debug_assertions)]
 		Combinator(_) => unreachable!(),
 		#[cfg(not(debug_assertions))]

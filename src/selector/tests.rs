@@ -55,6 +55,21 @@ fn parses_whitespace_as_descendant_between_groups() {
 }
 
 #[test]
+fn parses_selector_lists_between_complete_groups() {
+	let steps = parser::Parser::parse("section.card, span.title, #hero").unwrap();
+
+	assert_eq!(steps, vec![
+		Step::Filter(Filter::Tag("section")),
+		Step::Filter(Filter::Class("card")),
+		Step::SelectorList,
+		Step::Filter(Filter::Tag("span")),
+		Step::Filter(Filter::Class("title")),
+		Step::SelectorList,
+		Step::Filter(Filter::Id("hero")),
+	]);
+}
+
+#[test]
 fn parses_attribute_contains_operator() {
 	let steps = parser::Parser::parse("div[data-kind*=hero]").unwrap();
 
@@ -155,6 +170,14 @@ fn rejects_leading_child_combinator() {
 	let error = parser::Parser::parse("> span").unwrap_err();
 
 	assert_eq!(error.kind, parser::ParseSelectorErrorKind::InvalidSelector);
+}
+
+#[test]
+fn rejects_empty_selector_list_groups() {
+	for selector in [", span", "div,", "div,,span", "div, ,span"] {
+		let error = parser::Parser::parse(selector).unwrap_err();
+		assert_eq!(error.kind, parser::ParseSelectorErrorKind::InvalidSelector);
+	}
 }
 
 #[test]

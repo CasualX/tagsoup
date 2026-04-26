@@ -53,7 +53,7 @@ fn bench_lexer(bencher: &mut Bencher, host: &str) {
 	let html = load_smoke_output(host);
 	bencher.bytes = html.len() as u64;
 	bencher.iter(|| {
-		black_box(tagsoup::lexer::Lexer::new(black_box(html.as_str().as_bytes())).count());
+		black_box(tagsoup::Lexer::new(black_box(html.as_str().as_bytes())).count());
 	});
 }
 

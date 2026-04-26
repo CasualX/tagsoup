@@ -2,15 +2,15 @@
 
 use crate::SourceSpan;
 
-/// Token kind.
+/// TagSoup Token kind.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum TokenKind {
 	/// The start of a processing instruction, e.g. `<?xml`.
 	///
 	/// ```
 	/// let input = "<?xml ?>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[0].kind, tagsoup::lexer::TokenKind::PIOpen);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[0].kind, tagsoup::TokenKind::PIOpen);
 	/// assert_eq!(&input[tokens[0].span.range()], "xml");
 	/// ```
 	PIOpen,
@@ -19,8 +19,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<?xml ?>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[1].kind, tagsoup::lexer::TokenKind::PIClose);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[1].kind, tagsoup::TokenKind::PIClose);
 	/// assert_eq!(&input[tokens[1].span.range()], "?>");
 	/// ```
 	PIClose,
@@ -29,8 +29,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<!-- comment -->";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[0].kind, tagsoup::lexer::TokenKind::Comment);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[0].kind, tagsoup::TokenKind::Comment);
 	/// assert_eq!(&input[tokens[0].span.range()], "<!-- comment -->");
 	/// ```
 	Comment,
@@ -39,8 +39,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<![CDATA[x < y]]>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[0].kind, tagsoup::lexer::TokenKind::CData);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[0].kind, tagsoup::TokenKind::CData);
 	/// assert_eq!(&input[tokens[0].span.range()], "<![CDATA[x < y]]>");
 	/// ```
 	CData,
@@ -49,8 +49,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<!DOCTYPE html>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[0].kind, tagsoup::lexer::TokenKind::DocTypeOpen);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[0].kind, tagsoup::TokenKind::DocTypeOpen);
 	/// assert_eq!(&input[tokens[0].span.range()], "DOCTYPE");
 	/// ```
 	DocTypeOpen,
@@ -59,8 +59,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<!DOCTYPE html>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[1].kind, tagsoup::lexer::TokenKind::DocTypeValue);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[1].kind, tagsoup::TokenKind::DocTypeValue);
 	/// assert_eq!(&input[tokens[1].span.range()], "html");
 	/// ```
 	DocTypeValue,
@@ -69,8 +69,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<!DOCTYPE html [ ... ]>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[2].kind, tagsoup::lexer::TokenKind::DocTypeSubsetOpen);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[2].kind, tagsoup::TokenKind::DocTypeSubsetOpen);
 	/// assert_eq!(&input[tokens[2].span.range()], "[");
 	/// ```
 	DocTypeSubsetOpen,
@@ -79,8 +79,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<!DOCTYPE html [ ... ]>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[4].kind, tagsoup::lexer::TokenKind::DocTypeSubsetClose);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[4].kind, tagsoup::TokenKind::DocTypeSubsetClose);
 	/// assert_eq!(&input[tokens[4].span.range()], "]");
 	/// ```
 	DocTypeSubsetClose,
@@ -89,8 +89,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<!DOCTYPE html>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[2].kind, tagsoup::lexer::TokenKind::DocTypeClose);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[2].kind, tagsoup::TokenKind::DocTypeClose);
 	/// assert_eq!(&input[tokens[2].span.range()], ">");
 	/// ```
 	DocTypeClose,
@@ -99,8 +99,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<div>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[0].kind, tagsoup::lexer::TokenKind::TagOpen);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[0].kind, tagsoup::TokenKind::TagOpen);
 	/// assert_eq!(&input[tokens[0].span.range()], "div");
 	/// ```
 	TagOpen,
@@ -109,8 +109,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "</div>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[0].kind, tagsoup::lexer::TokenKind::EndTagOpen);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[0].kind, tagsoup::TokenKind::EndTagOpen);
 	/// assert_eq!(&input[tokens[0].span.range()], "div");
 	/// ```
 	EndTagOpen,
@@ -119,8 +119,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<div>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[1].kind, tagsoup::lexer::TokenKind::TagClose);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[1].kind, tagsoup::TokenKind::TagClose);
 	/// assert_eq!(&input[tokens[1].span.range()], ">");
 	/// ```
 	TagClose,
@@ -129,8 +129,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<br/>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[1].kind, tagsoup::lexer::TokenKind::TagSelfClose);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[1].kind, tagsoup::TokenKind::TagSelfClose);
 	/// assert_eq!(&input[tokens[1].span.range()], "/>");
 	/// ```
 	TagSelfClose,
@@ -139,8 +139,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<div class=hero>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[1].kind, tagsoup::lexer::TokenKind::AttrName);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[1].kind, tagsoup::TokenKind::AttrName);
 	/// assert_eq!(&input[tokens[1].span.range()], "class");
 	/// ```
 	AttrName,
@@ -149,8 +149,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<div class=hero>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[2].kind, tagsoup::lexer::TokenKind::AttrValue);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[2].kind, tagsoup::TokenKind::AttrValue);
 	/// assert_eq!(&input[tokens[2].span.range()], "hero");
 	/// ```
 	AttrValue,
@@ -159,8 +159,8 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "hello";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[0].kind, tagsoup::lexer::TokenKind::Text);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[0].kind, tagsoup::TokenKind::Text);
 	/// assert_eq!(&input[tokens[0].span.range()], "hello");
 	/// ```
 	Text,
@@ -171,14 +171,14 @@ pub enum TokenKind {
 	///
 	/// ```
 	/// let input = "<div \0bad>";
-	/// let tokens: Vec<_> = tagsoup::lexer::Lexer::new(input.as_bytes()).collect();
-	/// assert_eq!(tokens[1].kind, tagsoup::lexer::TokenKind::Error);
+	/// let tokens: Vec<_> = tagsoup::Lexer::new(input.as_bytes()).collect();
+	/// assert_eq!(tokens[1].kind, tagsoup::TokenKind::Error);
 	/// assert_eq!(&input[tokens[1].span.range()], "\0bad");
 	/// ```
 	Error,
 }
 
-/// Token.
+/// TagSoup Token.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Token {
 	/// The kind of token.
@@ -201,7 +201,7 @@ enum LexerState {
 	DocTypeValue, // Inside a doctype declaration, looking for values
 }
 
-/// Lexer for tokenizing TagSoup input.
+/// TagSoup lexer.
 ///
 /// Lazy tokenization of the input string, producing a stream of tokens that can be iterated over.
 /// Each token contains a `SourceSpan` that indicates the byte range of the token in the input string.
@@ -210,7 +210,7 @@ enum LexerState {
 pub struct Lexer<'a> {
 	input: &'a [u8],
 	position: usize,
-	doctype_depth: u32,
+	doctype_depth: u32, // Cheating a bit here to handle nested `[` and `]` in doctype declarations...
 	state: LexerState,
 }
 
@@ -248,7 +248,7 @@ impl<'a> Lexer<'a> {
 
 	/// Reads raw text until the next occurrence of a close tag with the given name.
 	///
-	/// Skips over any input until `</tag` is found.
+	/// Skips over any input until `</tag` is found and stops before consuming the close tag.
 	pub fn raw_text(&mut self, tag: &[u8]) -> SourceSpan {
 		let start = self.position;
 

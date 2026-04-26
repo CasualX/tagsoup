@@ -12,6 +12,7 @@ pub enum Combinator {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Step<'a> {
+	SelectorList,
 	Combinator(Combinator),
 	Filter(Filter<'a>),
 }

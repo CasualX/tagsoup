@@ -10,8 +10,6 @@ It is built for the boringly useful jobs:
 
 It is not trying to impersonate a browser engine. It just wants to turn messy markup into something workable, quickly.
 
-Loosely based on the [HTML Living Standard](https://html.spec.whatwg.org/multipage/syntax.html).
-
 # Highlights
 
 - Optional `serde` support, enabled by default.
@@ -63,33 +61,34 @@ use std::collections::HashMap;
 use std::borrow::Cow;
 use std::{error, fmt, iter, mem, str};
 
-#[macro_use]
-mod known;
+// #[macro_use]
+// mod known;
 
-mod attribute;
-mod tag;
+// mod attribute;
+// mod tag;
 
-pub use attribute::*;
-pub use tag::*;
+// pub use attribute::*;
+// pub use tag::*;
 
 
+mod dom_ref;
 mod element;
 mod entity;
 mod errors;
+mod lexer;
 mod selector;
 mod span;
 mod utils;
 mod visit;
 
+pub use dom_ref::*;
 pub use element::*;
 pub use errors::*;
+pub use lexer::*;
 pub use span::*;
 pub use utils::*;
 pub use visit::*;
 
-pub mod lexer;
-mod dom_ref;
-pub use dom_ref::*;
 
 #[cfg(debug_assertions)]
 #[inline]

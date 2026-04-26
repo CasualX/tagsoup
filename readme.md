@@ -17,8 +17,6 @@ It is built for the boringly useful jobs:
 
 It is not trying to impersonate a browser engine. It just wants to turn messy markup into something workable, quickly.
 
-Loosely based on the [HTML Living Standard](https://html.spec.whatwg.org/multipage/syntax.html).
-
 Features
 --------
 

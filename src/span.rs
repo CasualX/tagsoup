@@ -28,6 +28,16 @@ impl SourceSpan {
 		self.start as usize..self.end as usize
 	}
 
+	/// Trims leading and trailing ASCII whitespace from the span.
+	pub fn trim(&self, source: &[u8]) -> SourceSpan {
+		let Some(text) = source.get(self.range()) else { return *self };
+		let trimmed_start = text.trim_ascii_start();
+		let start = self.start + (text.len() - trimmed_start.len()) as u32;
+		let trimmed_end = trimmed_start.trim_ascii_end();
+		let end = self.end - (trimmed_start.len() - trimmed_end.len()) as u32;
+		SourceSpan { start, end }
+	}
+
 	/// Returns the line and column of the span in the source.
 	///
 	/// This runs in _O(n)_ time, where n is the length of the source.

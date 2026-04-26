@@ -65,6 +65,18 @@ impl<'a> Parser<'a> {
 				break;
 			}
 
+			if matches!(parser.peek(), Some(b',')) {
+				let comma_position = parser.position;
+				parser.bump();
+
+				if parser.steps.is_empty() || parser.last_is_combinator() || matches!(parser.steps.last(), Some(Step::SelectorList)) {
+					return Err(parser.error_at(comma_position, parser.position, ParseSelectorErrorKind::InvalidSelector));
+				}
+
+				parser.steps.push(Step::SelectorList);
+				continue;
+			}
+
 			if let Some(combinator) = parser.next_combinator() {
 				let combinator_position = parser.position;
 				parser.bump();
@@ -77,7 +89,7 @@ impl<'a> Parser<'a> {
 				continue;
 			}
 
-			if saw_whitespace && !parser.steps.is_empty() && !parser.last_is_combinator() {
+			if saw_whitespace && !parser.steps.is_empty() && !parser.last_is_combinator() && !matches!(parser.steps.last(), Some(Step::SelectorList)) {
 				parser.steps.push(Step::Combinator(Combinator::Descendant));
 			}
 
@@ -85,6 +97,10 @@ impl<'a> Parser<'a> {
 		}
 
 		if parser.last_is_combinator() {
+			let position = parser.position;
+			return Err(parser.error_at(position, position, ParseSelectorErrorKind::InvalidSelector));
+		}
+		if matches!(parser.steps.last(), Some(Step::SelectorList)) {
 			let position = parser.position;
 			return Err(parser.error_at(position, position, ParseSelectorErrorKind::InvalidSelector));
 		}
@@ -122,7 +138,7 @@ impl<'a> Parser<'a> {
 					self.parse_pseudo_class()?;
 					parsed = true;
 				}
-				Some(b'>') | None => break,
+				Some(b'>') | Some(b',') | None => break,
 				Some(ch) if ch.is_ascii_whitespace() => break,
 				Some(_) if !parsed => {
 					let value = self.next_ident(ParseSelectorErrorKind::InvalidSelector)?;
